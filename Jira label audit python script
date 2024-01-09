@@ -1,0 +1,163 @@
+import getpass
+from prettytable import PrettyTable
+import pyautogui
+import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import StaleElementReferenceException
+
+name = input('Enter your name: ')
+User = input('Enter username: ')
+password = getpass.getpass('Enter password: ')
+zukey = input('Press Zukey: ')
+print('Date format = YYYY-MM-DD')
+start_date = input('Enter the start date: ')
+end_date = input('Enter the end date: ')
+print()
+print(f'''Hi Team,
+      
+Please find the JIRA Label Audit report from {start_date} to {end_date},
+''')
+
+def jira():
+    driver = webdriver.Firefox()
+    driver.maximize_window()
+    driver.get('https://issues.labcollab.net/issues/?jql=')
+    full_password = password + zukey
+    employees = WebDriverWait(driver,30).until(
+        EC.element_to_be_clickable((By.XPATH, "//div[@id = 'bySelection']/div/div[@class = 'idpDescription float']/span[contains(text(), 'Amazon Employees/Contractors')]"))
+    )
+    employees.click()
+    WebDriverWait(driver,20).until(
+        EC.element_to_be_clickable((By.XPATH,'//div/form/input[@id="user_name_field"]'))
+    ).send_keys(User)
+    driver.find_element(By.ID,"user_name_btn").click()
+    password_field = WebDriverWait(driver,20).until(
+        EC.element_to_be_clickable((By.XPATH,'//div/div/form/input[@id="password_field"]'))
+    )
+    password_field.send_keys(full_password)
+    driver.find_element(By.ID,'password_btn').click()
+    filter = WebDriverWait(driver,100).until(
+        EC.visibility_of_element_located((By.XPATH,"//textarea[contains(@class, 'textarea') and contains(@class, 'search-entry') and contains(@class, 'advanced-search') and contains(@class, 'ajs-dirty-warning-exempt')]"))
+    )
+	
+	#Replace with your reporter and label details
+    filter_data = f"reporter in (xxx,yyy,zzz)  AND created >= {start_date} AND created <= {end_date} AND labels not in (xxx)"
+    filter.send_keys(filter_data)
+    time.sleep(3)
+    filter.send_keys(Keys.ENTER)
+    time.sleep(3)
+
+    jira_issues = driver.find_elements(By.XPATH,"//tbody/tr/td[@class='issuekey']/a[@class='issue-link']")
+    table = PrettyTable()
+    table.field_names = ["Jira_id", "Reporter", "Label_to_add", "Label_to_remove"]
+
+    for issue in jira_issues:
+        result_table = []
+        try:
+            issue.click()
+            time.sleep(10)
+            bug_issue = driver.find_element(By.XPATH, "//div/div/div/div/div[@class='mod-content']")
+            bug_text= bug_issue.text
+            jira_id = driver.find_elements(By.XPATH,'//div/ol/li/a[@id="key-val"]')
+            jira_id_text = [id.text for id in jira_id ]
+            reporter = driver.find_elements(By.XPATH, "//dl/dd/span[@id='reporter-val']/span[@class='user-hover']")
+            reporter_name = [name.text for name in reporter]
+            bug_jira = "Bug"
+            question_jira = "Question"
+			
+			#Replace with your device and label details 
+            ace_device = ["xxx"]
+            FTV_device = ["xxx"]
+            Tablet_device = ["xxx"]
+            Aucc_device = ["xxx"]
+            Ereader_device = ["xxx"]
+            fos_5 = ["xxx"]
+            fos_6 = ["xxx"]
+            fos_7 = ["xxx"]
+            fos_8 = ["xxx"]
+            fos5_label = ["xxx"]
+            fos6_label = ["xxx"]
+            fos7_label = ["xxx"]
+            fos8_label = ["xxx"]
+            ace_label = ["xxx"]
+            Ereader_label = ["xxx"]
+            question_label = ["xxx"]
+            FTV = ["xxx"]
+            Tablet = ["xxx"]
+            Aucc = ["xxx"]
+            team_label = ["xxx"]
+            reg_exp = ["xxx"]
+            label_to_remove =["xxx"]
+            result_row = {}
+            result_row["Jira_id"] = jira_id_text
+            result_row["Reporter"] = reporter_name
+            if bug_jira in bug_text:
+                result_row["Team_label"] = [label for label in team_label if label not in bug_text]
+                Reg_Exp= [label for label in reg_exp if label not in bug_text]
+                result_row["Reg_Exp"] = Reg_Exp
+                result_row["label_to_remove"] = [label for label in label_to_remove if label in bug_text]
+                if any(device in bug_text for device in ace_device):
+                    result_row["ace_label"] = [label for label in ace_label if label not in bug_text]
+                elif any(device in bug_text for device in fos_5):
+                    result_row["fos5_label"] = [label for label in fos5_label if label not in bug_text]
+                elif any(device in bug_text for device in fos_6):
+                    result_row["fos6_label"] = [label for label in fos6_label if label not in bug_text]
+                elif any(device in bug_text for device in fos_7):
+                    result_row["fos7_label"] = [label for label in fos7_label if label not in bug_text]
+                elif any(device in bug_text for device in fos_8):
+                    result_row["fos8_label"] = [label for label in fos8_label if label not in bug_text]
+                    if any(device in bug_text for device in FTV_device):
+                        result_row["FTV_label"] = [label for label in FTV if label not in bug_text]
+                    elif any(device in bug_text for device in Aucc_device):
+                        result_row["Aucc_label"] = [label for label in Aucc if label not in bug_text]
+                    elif any(device in bug_text for device in Tablet_device):
+                        result_row["Tablet_label"] = [label for label in Tablet if label not in bug_text]
+                elif any(device in bug_text for device in Ereader_device):
+                    result_row["Ereader_label"] = [label for label in Ereader_label if label not in bug_text]
+            elif question_jira in bug_text:
+                result_row["Question"] = [label for label in question_label if label not in bug_text]
+        except StaleElementReferenceException:
+            print('StaleElementReferenceException. Refreshing elements.')
+            jira_issues = driver.find_elements(By.XPATH, "//tbody/tr/td[@class='issuekey']/a[@class='issue-link']")
+            issue = jira_issues[jira_issues.index(issue)]
+            issue.click()
+            time.sleep(15)
+        finally:
+            driver.back()
+            time.sleep(5)
+        result_table.append(result_row)
+        output = (
+            result_row.get("Team_label", ),
+            result_row.get("FTV_label", ),
+            result_row.get("Aucc_label", ),
+            result_row.get("ace_label", ),
+            result_row.get("Ereader_label", ),
+            result_row.get("fos5_label", ),
+            result_row.get("fos6_label", ),
+            result_row.get("fos7_label", ),
+            result_row.get("fos8_label", ),
+            result_row.get("Question_label", ),
+            result_row.get("Tablet_label", ),
+            result_row.get("label_to_remove", ),
+            result_row.get("Reg_Exp", )
+        )
+        Reg_Exp_label = ["(Add Reg or Exp label)" for label in Reg_Exp]
+        if any(value for value in output[:-1]) or result_row.get("Label_to_remove", ):
+            for row in result_table:
+                all_labels = [", ".join(map(str, label)) for label in [row.get("Team_label", []), row.get("ace_label", []), row.get("fos5_label", []), row.get("fos6_label", []), row.get("fos7_label", []), row.get("fos8_label", []), row.get("Question_label", []), row.get("FTV_label", []), row.get("Aucc_label", []), row.get("Tablet_label", []), row.get("Ereader_label", []), Reg_Exp_label] if label]
+                remove_label = [", ".join(map(str, label)) for label in [row.get("Label_to_remove", )] if label]
+                if any(all_labels) or remove_label:
+                    table.add_row([row.get("Jira_id", ),
+                                   row.get("Reporter", ),
+                                   ", ".join(all_labels),
+                                   remove_label if remove_label else ""])
+    print(table)
+jira()
+print()
+print(f'''Regards,
+{name}''')
+pyautogui.hotkey('alt', 'tab')
