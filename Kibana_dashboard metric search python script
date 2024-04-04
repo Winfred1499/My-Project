@@ -8,6 +8,7 @@ import getpass
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
 
 user_name = input("Enter user name: ")
 crown_password = getpass.getpass("Enter crowd password: ")
@@ -15,13 +16,39 @@ zukey = input("Press Zukey: ")
 password = crown_password + zukey
 screenshot = input("Screen shot name: ")
 print()
+
 def met():
     global device_name
     global ota_pool
     global metric
+    global version_value
     device_name = input("Enter device name: ")
     ota_pool = input("Enter ota group: ")
-    metric = input("Enter metric: ")
+    vlog_vitals = input("""For vlog input = Enter 1
+For vitals input = Enter 2
+Vlog or Vitals: """)
+    print()
+    if vlog_vitals == "1":
+        print("You have selected Vlog input")
+        print()
+        version_value = input("Enter build: ")
+    else:
+        print("You have selected Vitals input")
+        print("Note: Input vital metric contains build info")
+        print()
+    while True:
+        metric = input("Enter metric: ")
+        vitals_build = ['software_version=', """_osFileTag":'""", 'software_version"#"', "clientTimestamp"]
+        if vlog_vitals == "1" and any(vitals in metric for vitals in vitals_build):
+            print("Error: Metric mismatches")
+            print()
+            continue
+        if vlog_vitals == "2" and not any(vitals in metric for vitals in vitals_build):
+            print("Error: Metric mismatches")
+            print()
+            continue
+        else:
+            break
 met()
 
 if 'wifiKDM:' in metric:
@@ -60,10 +87,26 @@ if """key":'""" in metric:
     key_start = metric.find("""key":'""") + len("""key":'""")
     key_end = metric.find("'",key_start)
     key_value = metric[key_start:key_end]
+if '"key"#"' in metric:
+    key_start = metric.find('"key"#"') + len('"key"#"')
+    key_end = metric.find('"',key_start)
+    key_value = metric[key_start:key_end]
+if 'key#' in metric:
+    key_start = metric.find('key#') + len('key#')
+    key_end = metric.find('$',key_start)
+    key_value = metric[key_start:key_end]
+if """Data=[['""" in metric:
+    key_start = metric.find("""Data=[['""") + len("""Data=[['""")
+    key_end = metric.find("'",key_start)
+    key_value = metric[key_start:key_end]
 if "metadata=" in metric:
     metadata_start = metric.find("metadata=") + len("metadata=")
     metadata_end = metric.find(";",metadata_start)
     metadata_value = metric[metadata_start:metadata_end]
+    if len(metadata_value) > 10:
+        metadata_start = metric.find("metadata=") + len("metadata=")
+        metadata_end = metric.find("!", metadata_start)
+        metadata_value = metric[metadata_start:metadata_end]
 if 'metadata"#"' in metric:
     metadata_start = metric.find('metadata"#"') + len('metadata"#"')
     metadata_end = metric.find('"',metadata_start)
@@ -71,6 +114,10 @@ if 'metadata"#"' in metric:
 if """metadata":'""" in metric:
     metadata_start = metric.find("""metadata":'""") + len("""metadata":'""")
     metadata_end = metric.find("'",metadata_start)
+    metadata_value = metric[metadata_start:metadata_end]
+if "metadata#" in metric:
+    metadata_start = metric.find("metadata#") + len("metadata#")
+    metadata_end = metric.find("$",metadata_start)
     metadata_value = metric[metadata_start:metadata_end]
 if "metadata1=" in metric:
     metadata1_start = metric.find("metadata1=") + len("metadata1=")
@@ -84,6 +131,10 @@ if """metadata1":'""" in metric:
     metadata1_start = metric.find("""metadata1":'""") + len("""metadata1":'""")
     metadata1_end = metric.find("'",metadata1_start)
     metadata1_value = metric[metadata1_start:metadata1_end]
+if 'metadata1#' in metric:
+    metadata1_start = metric.find('metadata1#') + len('metadata1#')
+    metadata1_end = metric.find('$',metadata1_start)
+    metadata1_value = metric[metadata1_start:metadata1_end]
 if "metadata2=" in metric:
     metadata2_start = metric.find("metadata2=") + len("metadata2=")
     metadata2_end = metric.find(";",metadata2_start)
@@ -95,6 +146,10 @@ if 'metadata2"#"' in metric:
 if """metadata2":'""" in metric:
     metadata2_start = metric.find("""metadata2":'""") + len("""metadata2":'""")
     metadata2_end = metric.find("'",metadata2_start)
+    metadata2_value = metric[metadata2_start:metadata2_end]
+if 'metadata2#' in metric:
+    metadata2_start = metric.find('metadata2#') + len('metadata2#')
+    metadata2_end = metric.find('$',metadata2_start)
     metadata2_value = metric[metadata2_start:metadata2_end]
 if "metadata3=" in metric:
     metadata3_start = metric.find("metadata3=") + len("metadata3=")
@@ -108,6 +163,10 @@ if """metadata3":'""" in metric:
     metadata3_start = metric.find("""metadata3":'""") + len("""metadata3":'""")
     metadata3_end = metric.find("'",metadata3_start)
     metadata3_value = metric[metadata3_start:metadata3_end]
+if 'metadata3#' in metric:
+    metadata3_start = metric.find('metadata3#') + len('metadata3#')
+    metadata3_end = metric.find('$',metadata3_start)
+    metadata3_value = metric[metadata3_start:metadata3_end]
 if "metadata4=" in metric:
     metadata4_start = metric.find("metadata4=") + len("metadata4=")
     metadata4_end = metric.find(";",metadata4_start)
@@ -120,6 +179,10 @@ if """metadata4":'""" in metric:
     metadata4_start = metric.find("""metadata4":'""") + len("""metadata4":'""")
     metadata4_end = metric.find("'",metadata4_start)
     metadata4_value = metric[metadata4_start:metadata4_end]
+if 'metadata4#' in metric:
+    metadata4_start = metric.find('metadata4#') + len('metadata4#')
+    metadata4_end = metric.find('$',metadata4_start)
+    metadata4_value = metric[metadata4_start:metadata4_end]
 else:
     print()
 
@@ -130,18 +193,23 @@ def search_filter():
     program_kdm = "wifiKDM"
     program_minerva = "wifiKDM_minerva"
     Filter = f"software_version:{version_value} AND device_family:{device_name} AND operation:{operation_value} AND pool:{ota_pool}"
-    key = ("key=" or """key":'""" or 'key":')
-    if key in metric:
+    key = ["key=", """key":'""", 'key":', '"key"#"', 'key#', """Data=[['"""]
+    metadata = ["metadata=", 'metadata"#"', """metadata":'""", "metadata#"]
+    metadata1 = ["metadata1=", 'metadata1"#"', """metadata1":'""", "metadata1#"]
+    metadata2 = ["metadata2=", 'metadata2"#"', """metadata2":'""", "metadata2#"]
+    metadata3 = ["metadata3=", 'metadata3"#"', """metadata3":'""", "metadata3#"]
+    metadata4 = ["metadata4=", 'metadata4"#"', """metadata4":'""", "metadata4#"]
+    if any(value in metric for value in key):
         Filter += f" AND key:{key_value}"
-    if "metadata" in metric:
+    if any(value in metric for value in metadata):
         Filter += f" AND metadata:{metadata_value}"
-    if "metadata1" in metric:
+    if any(value in metric for value in metadata1):
         Filter += f" AND d_metadata1:{metadata1_value}"
-    if "metadata2" in metric:
+    if any(value in metric for value in metadata2):
         Filter += f" AND d_metadata2:{metadata2_value}"
-    if "metadata3" in metric:
+    if any(value in metric for value in metadata3):
         Filter += f" AND d_metadata3:{metadata3_value}"
-    if "metadata4" in metric:
+    if any(value in metric for value in metadata4):
         Filter += f" AND d_metadata4:{metadata4_value}"
     else:
         print()
@@ -150,8 +218,8 @@ def search_filter():
 search_filter()
 
 
-print("""Raw = 1
-Agg = 2""")
+print("""For Raw = Enter 1
+For Agg = Enter 2""")
 raw_agg = input("Raw or Agg: ")
 print()
 
@@ -188,24 +256,36 @@ def raw():
     ).click()
     time.sleep(3)
     pyautogui.hotkey("Ctrl", "R")
-    time.sleep(25)
+    time.sleep(2)
     try:
-        kdm_results = driver.find_element(By.XPATH, "//div/doc-table/div[@class='doc-table-container']")
+        kdm_results = WebDriverWait(driver,30).until(
+              EC.element_to_be_clickable((By.XPATH, "//div/doc-table/div[@class='doc-table-container']"))
+        )
+        time.sleep(3)
         kdm_results_text = kdm_results.text
         if version_value in kdm_results_text:
             WebDriverWait(driver,20).until(
               EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
-            for i in range(11):
-                pyautogui.hotkey("down")
+            full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer/div[@class='doc-viewer']")
+            kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+            full_capture.screenshot(kdm_file_path)
+            print(f"Screenshot saved to {kdm_file_path}")
         else:
             print()
-    except NoSuchElementException:
+            kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+            screen_capture = ImageGrab.grab()
+            screen_capture.save(kdm_file_path)
+            print(f"Screenshot saved to {kdm_file_path}")
+    except NoSuchElementException and TimeoutException:
         print()
-    kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
-    screen_capture = ImageGrab.grab()
-    screen_capture.save(kdm_file_path)
-    print(f"Screenshot saved to {kdm_file_path}")
+        WebDriverWait(driver,20).until(
+            EC.element_to_be_clickable((By.XPATH,"//div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
+        )
+        kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+        screen_capture = ImageGrab.grab()
+        screen_capture.save(kdm_file_path)
+        print(f"Screenshot saved to {kdm_file_path}")
     time.sleep(2)
     try:
         kdm_results = driver.find_element(By.XPATH, "//div/doc-table/div[@class='doc-table-container']")
@@ -226,24 +306,36 @@ def raw():
     driver.find_element(By.XPATH,"//form/div/div/button/span[@class='fa fa-search']").click()
     time.sleep(2)
     pyautogui.hotkey("Ctrl", "R")
-    time.sleep(20)
+    time.sleep(2)
     try:
-        minerva_results = driver.find_element(By.XPATH, "//div/doc-table/div[@class='doc-table-container']")
+        minerva_results = WebDriverWait(driver,20).until(
+              EC.element_to_be_clickable((By.XPATH, "//div/doc-table/div[@class='doc-table-container']"))
+        )
+        time.sleep(3)
         minerva_results_text = minerva_results.text
         if version_value in minerva_results_text:
             WebDriverWait(driver,20).until(
               EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
-            for i in range(11):
-                pyautogui.hotkey("down")
+            full_capture = driver.find_element(By.XPATH, "//div/table/tbody/tr/td/doc-viewer/div[@class='doc-viewer']")
+            minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+            full_capture.screenshot(minerva_file_path)
+            print(f"Screenshot saved to {minerva_file_path}")
         else:
             print()
-    except NoSuchElementException:
+            minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+            screen_capture = ImageGrab.grab()
+            screen_capture.save(minerva_file_path)
+            print(f"Screenshot saved to {minerva_file_path}")
+    except NoSuchElementException and TimeoutException:
         print()
-    minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
-    screen_capture = ImageGrab.grab()
-    screen_capture.save(minerva_file_path)
-    print(f"Screenshot saved to {minerva_file_path}")
+        WebDriverWait(driver,20).until(
+            EC.element_to_be_clickable((By.XPATH,"//div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
+        )
+        minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+        screen_capture = ImageGrab.grab()
+        screen_capture.save(minerva_file_path)
+        print(f"Screenshot saved to {minerva_file_path}")
     time.sleep(2)
     try:
         minerva_results = driver.find_element(By.XPATH, "//div/doc-table/div[@class='doc-table-container']")
@@ -289,24 +381,36 @@ def agg():
     driver.find_element(By.XPATH, "//button/span[@class='fa fa-search']").click()
     time.sleep(2)
     pyautogui.hotkey("Ctrl", "R")
-    time.sleep(25)
+    time.sleep(2)
     try:
-        kdm_results = driver.find_element(By.XPATH, "//main/div/div/div[@class = 'discover-content']")
+        kdm_results = WebDriverWait(driver,30).until(
+                EC.element_to_be_clickable((By.XPATH, "//main/div/div/div[@class = 'discover-content']"))
+        )
+        time.sleep(3)
         kdm_results_text = kdm_results.text
         if version_value in kdm_results_text:
             WebDriverWait(driver,20).until(
                 EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
-            for i in range(11):
-                pyautogui.hotkey("down")
+            full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer[@hit='row']")
+            kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+            full_capture.screenshot(kdm_file_path)
+            print(f"Screenshot saved to {kdm_file_path}")
         else:
             print()
-    except NoSuchElementException:
+            kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+            screen_capture = ImageGrab.grab()
+            screen_capture.save(kdm_file_path)
+            print(f"Screenshot saved to {kdm_file_path}")
+    except NoSuchElementException and TimeoutException:
         print()
-    kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
-    screen_capture = ImageGrab.grab()
-    screen_capture.save(kdm_file_path)
-    print(f"Screenshot saved to {kdm_file_path}")
+        WebDriverWait(driver,20).until(
+            EC.element_to_be_clickable((By.XPATH,"//main/div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
+        )
+        kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+        screen_capture = ImageGrab.grab()
+        screen_capture.save(kdm_file_path)
+        print(f"Screenshot saved to {kdm_file_path}")
     time.sleep(2)
     try:
         kdm_results = driver.find_element(By.XPATH, "//main/div/div/div[@class = 'discover-content']")
@@ -327,24 +431,36 @@ def agg():
     driver.find_element(By.XPATH,"//form/div/div/button/span[@class='fa fa-search']").click()
     time.sleep(2)
     pyautogui.hotkey("Ctrl", "R")
-    time.sleep(20)
+    time.sleep(2)
     try:
-        minerva_results = driver.find_element(By.XPATH, "//button/span[@class='fa fa-search']")
+        minerva_results = WebDriverWait(driver,30).until(
+                EC.element_to_be_clickable((By.XPATH, "//button/span[@class='fa fa-search']"))
+        )
+        time.sleep(3)
         minerva_results_text = minerva_results.text
         if version_value in minerva_results_text:
             WebDriverWait(driver,20).until(
                 EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
-            for i in range(11):
-                pyautogui.hotkey("down")
+            full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer[@hit='row']")
+            minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+            full_capture.screenshot(minerva_file_path)
+            print(f"Screenshot saved to {minerva_file_path}")
         else:
             print()
-    except NoSuchElementException:
+            minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+            screen_capture = ImageGrab.grab()
+            screen_capture.save(minerva_file_path)
+            print(f"Screenshot saved to {minerva_file_path}")
+    except NoSuchElementException and TimeoutException:
         print()
-    minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
-    screen_capture = ImageGrab.grab()
-    screen_capture.save(minerva_file_path)
-    print(f"Screenshot saved to {minerva_file_path}")
+        WebDriverWait(driver,20).until(
+            EC.element_to_be_clickable((By.XPATH,"//main/div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
+        )
+        minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+        screen_capture = ImageGrab.grab()
+        screen_capture.save(minerva_file_path)
+        print(f"Screenshot saved to {minerva_file_path}")
     time.sleep(2)
     try:
         minerva_results = driver.find_element(By.XPATH, "//button/span[@class='fa fa-search']")
@@ -361,4 +477,9 @@ if raw_agg == "1":
     raw()
 else:
     agg()
+
+
+
+
+
 
