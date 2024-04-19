@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import time
 import pyautogui
 from PIL import ImageGrab
@@ -10,6 +10,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import TimeoutException
 
+Windows_Linux = input("""For Windows = Enter 1
+For Linux = Enter 2
+Windows or Linux: """)
+print()
+if Windows_Linux == "1":
+    Path = "c:/Users/dswinfre/Pictures/"
+else: 
+    Path = "/home/ANT.AMAZON.COM/dswinfre/Pictures/"
 user_name = input("Enter user name: ")
 crown_password = getpass.getpass("Enter crowd password: ")
 zukey = input("Press Zukey: ")
@@ -268,12 +276,12 @@ def raw():
               EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
             full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer/div[@class='doc-viewer']")
-            kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+            kdm_file_path = f"{Path}{screenshot}_kdm.png"
             full_capture.screenshot(kdm_file_path)
             print(f"Screenshot saved to {kdm_file_path}")
         else:
             print()
-            kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+            kdm_file_path = f"{Path}{screenshot}_kdm.png"
             screen_capture = ImageGrab.grab()
             screen_capture.save(kdm_file_path)
             print(f"Screenshot saved to {kdm_file_path}")
@@ -282,7 +290,7 @@ def raw():
         WebDriverWait(driver,20).until(
             EC.element_to_be_clickable((By.XPATH,"//div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
         )
-        kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+        kdm_file_path = f"{Path}{screenshot}_kdm.png"
         screen_capture = ImageGrab.grab()
         screen_capture.save(kdm_file_path)
         print(f"Screenshot saved to {kdm_file_path}")
@@ -294,8 +302,14 @@ def raw():
             print(f"{operation_value} kdm metric is been emitted. Hence passing the case.")
         else:
             print(f"{operation_value} kdm metric is not been emitted. Hence failing the case.")
+            print("Note:")
+            print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
+            print("If still metric is not seen raise a jira")
     except NoSuchElementException:
         print(f"{operation_value} kdm metric is not been emitted. Hence failing the case.")
+        print("Note:")
+        print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
+        print("If still metric is not seen raise a jira")
     search = WebDriverWait(driver,20).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/form/div/div/input[@placeholder='Search...']"))
     )
@@ -318,12 +332,12 @@ def raw():
               EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
             full_capture = driver.find_element(By.XPATH, "//div/table/tbody/tr/td/doc-viewer/div[@class='doc-viewer']")
-            minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+            minerva_file_path = f"{Path}{screenshot}_minerva.png"
             full_capture.screenshot(minerva_file_path)
             print(f"Screenshot saved to {minerva_file_path}")
         else:
             print()
-            minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+            minerva_file_path = f"{Path}{screenshot}_minerva.png"
             screen_capture = ImageGrab.grab()
             screen_capture.save(minerva_file_path)
             print(f"Screenshot saved to {minerva_file_path}")
@@ -332,7 +346,7 @@ def raw():
         WebDriverWait(driver,20).until(
             EC.element_to_be_clickable((By.XPATH,"//div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
         )
-        minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+        minerva_file_path = f"{Path}{screenshot}_minerva.png"
         screen_capture = ImageGrab.grab()
         screen_capture.save(minerva_file_path)
         print(f"Screenshot saved to {minerva_file_path}")
@@ -344,8 +358,14 @@ def raw():
             print(f"{operation_value} minerva metric is been emitted. Hence passing the case.")
         else:
             print(f"{operation_value} minerva metric is not been emitted. Hence failing the case.")
+            print("Note:")
+            print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
+            print("If still metric is not seen raise a jira")
     except NoSuchElementException:
         print(f"{operation_value} minerva metric is not been emitted. Hence failing the case.")
+        print("Note:")
+        print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
+        print("If still metric is not seen raise a jira")
     pyautogui.hotkey("alt", "tab")
 
 def agg():
@@ -393,12 +413,12 @@ def agg():
                 EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
             full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer[@hit='row']")
-            kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+            kdm_file_path = f"{Path}{screenshot}_kdm.png"
             full_capture.screenshot(kdm_file_path)
             print(f"Screenshot saved to {kdm_file_path}")
         else:
             print()
-            kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+            kdm_file_path = f"{Path}{screenshot}_kdm.png"
             screen_capture = ImageGrab.grab()
             screen_capture.save(kdm_file_path)
             print(f"Screenshot saved to {kdm_file_path}")
@@ -407,7 +427,7 @@ def agg():
         WebDriverWait(driver,20).until(
             EC.element_to_be_clickable((By.XPATH,"//main/div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
         )
-        kdm_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_kdm.png"
+        kdm_file_path = f"{Path}{screenshot}_kdm.png"
         screen_capture = ImageGrab.grab()
         screen_capture.save(kdm_file_path)
         print(f"Screenshot saved to {kdm_file_path}")
@@ -419,8 +439,14 @@ def agg():
             print(f"{operation_value} kdm metric is been emitted. Hence passing the case.")
         else:
             print(f"{operation_value} kdm metric is not been emitted. Hence failing the case.")
+            print("Note:")
+            print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
+            print("If still metric is not seen raise a jira")
     except NoSuchElementException:
         print(f"{operation_value} kdm metric is not been emitted. Hence failing the case.")
+        print("Note:")
+        print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
+        print("If still metric is not seen raise a jira")
     search = WebDriverWait(driver,20).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/query-bar/form/div/div/div/input[@data-test-subj='queryInput']"))
     )
@@ -443,12 +469,12 @@ def agg():
                 EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
             full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer[@hit='row']")
-            minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+            minerva_file_path = f"{Path}{screenshot}_minerva.png"
             full_capture.screenshot(minerva_file_path)
             print(f"Screenshot saved to {minerva_file_path}")
         else:
             print()
-            minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+            minerva_file_path = f"{Path}{screenshot}_minerva.png"
             screen_capture = ImageGrab.grab()
             screen_capture.save(minerva_file_path)
             print(f"Screenshot saved to {minerva_file_path}")
@@ -457,7 +483,7 @@ def agg():
         WebDriverWait(driver,20).until(
             EC.element_to_be_clickable((By.XPATH,"//main/div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
         )
-        minerva_file_path = f"c:/Users/dswinfre/Pictures/{screenshot}_minerva.png"
+        minerva_file_path = f"{Path}{screenshot}_minerva.png"
         screen_capture = ImageGrab.grab()
         screen_capture.save(minerva_file_path)
         print(f"Screenshot saved to {minerva_file_path}")
@@ -469,8 +495,14 @@ def agg():
             print(f"{operation_value} minerva metric is been emitted. Hence passing the case.")
         else:
             print(f"{operation_value} minerva metric is not been emitted. Hence failing the case.")
+            print("Note:")
+            print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
+            print("If still metric is not seen raise a jira")
     except NoSuchElementException:
         print(f"{operation_value} minerva metric is not been emitted. Hence failing the case.")
+        print("Note:")
+        print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
+        print("If still metric is not seen raise a jira")
     pyautogui.hotkey("alt", "tab")
 
 if raw_agg == "1":
