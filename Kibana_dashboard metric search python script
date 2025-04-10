@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import time
-import pyautogui
-from PIL import ImageGrab
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import getpass
@@ -9,6 +7,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from datetime import datetime
+from selenium.webdriver.firefox.options import Options
+import logging
+import os
+options = Options()
+options.add_argument('-headless')
 
 vitals_build = ['software_version=', """_osFileTag":'""", 'software_version"#"', "clientTimestamp"]
 key = ["key=", """key":'""", 'key":', '"key"#"', 'key#', """Data=[['"""]
@@ -18,52 +21,110 @@ metadata2 = ["metadata2=", 'metadata2"#"', """metadata2":'""", "metadata2#"]
 metadata3 = ["metadata3=", 'metadata3"#"', """metadata3":'""", "metadata3#"]
 metadata4 = ["metadata4=", 'metadata4"#"', """metadata4":'""", "metadata4#"]
 
+start_end_pos_vlog = {
+    "operation": [('wifiKDM:', ':'), ("""operation":'""", "'")],
+    "key": [('key=', ';'), ('key#', '$')],
+    "metadata": [('metadata=', ';'), ('metadata"#"', '"'), ('metadata#', '$')],
+    "metadata1": [('metadata1=', ';'), ('metadata1"#"', '"'), ('metadata1#', '$')],
+    "metadata2": [('metadata2=', ';'), ('metadata2"#"', '"'), ('metadata2#', '$')],
+    "metadata3": [('metadata3=', ';'), ('metadata3"#"', '"'), ('metadata3#', '$')],
+    "metadata4": [('metadata4=', ';'), ('metadata4"#"', '"'), ('metadata4#', '$')]
+}
+start_end_pos_vital = {
+    "version": [('software_version=', ';'), ("""_osFileTag":'""", "'"), ('software_version"#"', '"')],
+    "operation": [('wifiKDM:', ':'), ('operation=', ';'), ("""operation":'""", "'")],
+    "key": [("key=", ";"), ("""key":'""", "'"), ('"key"#"', '"'), ("""Data=[['""", "'")],
+    "metadata": [("metadata=", ";"), ('metadata"#"', '"'), ("""metadata":'""", "'")],
+    "metadata1": [("metadata1=", ";"), ('metadata1"#"', '"'), ("""metadata1":'""", "'")],
+    "metadata2": [("metadata2=", ";"), ('metadata2"#"', '"'), ("""metadata2":'""", "'")],
+    "metadata3": [("metadata3=", ";"), ('metadata3"#"', '"'), ("""metadata3":'""", "'")],
+    "metadata4": [("metadata4=", ";"), ('metadata4"#"', '"'), ("""metadata4":'""", "'")]
+}
+
+def extract_value(metric, start_marker, end_marker):
+    """
+    Extracts a substring from the given metric string between two specified markers.
+
+    Args:
+        metric (str): The input string (metric) in which the extraction will take place.
+        start_marker (str): The substring that marks the beginning of the desired value.
+        end_marker (str): The substring that marks the end of the desired value.
+
+    Returns:
+        str: The substring extracted from the `metric` between the `start_marker` and `end_marker`.
+              If the markers are not found, returns None.
+    """
+    start_pos = metric.find(start_marker)
+    if start_pos != -1:
+        start_pos += len(start_marker)
+        end_pos = metric.find(end_marker, start_pos)
+        if end_pos != -1:
+            return metric[start_pos:end_pos]
+
 def user_detail():
-    global user_name, crown_password, zukey, password, Windows_Linux, raw_agg, Path
+    """Returns a dictionary of user details such as username, password, and path."""
+    logging.info("Getting login info")
     user_name = input("Enter user name: ")
-    crown_password = getpass.getpass("Enter crowd password: ")
+    midway_password = getpass.getpass("Enter midway password: ")
     zukey = input("Press Zukey: ")
-    password = crown_password + zukey
-    print()
-    Windows_Linux = input("For Windows = Enter 1\nFor Linux = Enter 2\nWindows or Linux: ")
-    windows_path = f"c:/Users/{user_name}/Pictures/"
-    linux_path = f"/home/ANT.AMAZON.COM/{user_name}/Pictures/"
-    if Windows_Linux == "1":
-        Path = windows_path
-    else:
-        Path = linux_path
-    print()
-    raw_agg = input("For Raw = Enter 1\nFor Agg = Enter 2\nRaw or Agg: ")
-    print()
+    password = midway_password + zukey
+    current_directory = os.getcwd()
+    path = f"{current_directory}/"
+    logging.info("Getting raw/agg choice")
+    raw_agg = input("\nFor Raw = Enter 1\nFor Agg = Enter 2\nRaw or Agg: ")
+    return {
+        "user_name": user_name,
+        "password": password,
+        "path": path,
+        "raw_agg": raw_agg
+    }
+
 
 def metric_input():
-    global device_name, device_type, ota_pool, version_value, vlog_metric, vital_metric, vlog_vitals, fos_ace, device_record_time_value, screenshot
-    device_name = input("Enter device name: ")
-    ota_pool = input("Enter ota group: ")
+    """Returns a dictionary of input parameters for metrics."""
+    logging.info("Getting user input")
+    device_name = input("\nEnter device name: ")
+    ota_pool = input("Enter OTA group: ")
     device_type = input("Enter device type: ")
-    screenshot = input("Screen shot name: ")
-    print()
-    fos_ace = input("""For FOS device = Enter 1\nFor ACE device = Enter 2\nFOS or ACE device: """)
-    print()
-    while True:
-        while True:
-            vlog_metric = input("Enter vlog metric: ")
-            print()
-            if not any(vitals in vlog_metric for vitals in vitals_build):
-                break
-            print("Error: Metric mismatches")
-            print()
-        while True:
-            vital_metric = input("Note: Input vital metric contains build info\nEnter vitals metric: ")
-            print()
-            if any(vitals in vital_metric for vitals in vitals_build):
-                break
-            print("Error: Metric mismatches")
-            print()
-        break
+    screenshot = input("Screenshot name: ")
+    fos_ace = input("\nFor FOS device = Enter 1\nFor ACE device = Enter 2\nFOS or ACE device: ")
 
-def metric_time_raw():
-    global device_record_time_value_vlog, device_record_time_value_vital
+    while True:
+        logging.info("Getting vlog_metric")
+        vlog_metric = input("\nEnter vlog metric: ")
+        if not any(vitals in vlog_metric for vitals in vitals_build):
+            print("\nValid vlog metric received.")
+            break
+        else:
+            print("\nError: Metric mismatches. Please try again.")
+            continue
+    while True:
+        logging.info("Getting vital_metric")
+        vital_metric = input("\nNote: Input vital metric contains build info\nEnter vitals metric: ")
+        if any(vitals in vital_metric for vitals in vitals_build):
+            print("\nValid vital metric received.")
+            break
+        else:
+            print("\nError: Metric mismatches. Please try again.")
+            continue
+    return {
+        "device_name": device_name,
+        "ota_pool": ota_pool,
+        "device_type": device_type,
+        "screenshot": screenshot,
+        "fos_ace": fos_ace,
+        "vlog_metric": vlog_metric,
+        "vital_metric": vital_metric
+    }
+
+
+def metric_time_raw(metric_input_dictionary):
+    """Returns time values for raw metrics."""
+    fos_ace = metric_input_dictionary.get("fos_ace")
+    vlog_metric = metric_input_dictionary.get("vlog_metric")
+    vital_metric = metric_input_dictionary.get("vital_metric")
+    time_values = {}
+    logging.info("Extracting time info for raw")
     if fos_ace == "1" and vlog_metric:
         parts = vlog_metric.split()
         date = parts[0]
@@ -71,7 +132,7 @@ def metric_time_raw():
         time_split = time_sec.split(".")
         time_str = time_split[0]
         current_year = datetime.now().year
-        device_record_time_value_vlog = f'["{current_year}-{date}T{time_str}" TO "{current_year}-{date}T{time_str}"]'
+        time_values["device_record_time_value_vlog"] = f'["{current_year}-{date}T{time_str}" TO "{current_year}-{date}T{time_str}"]'
     if fos_ace == "1" and vital_metric:
         parts = vital_metric.split()
         date = parts[0]
@@ -79,299 +140,239 @@ def metric_time_raw():
         time_split = time_sec.split(".")
         time_str = time_split[0]
         current_year = datetime.now().year
-        device_record_time_value_vital = f'["{current_year}-{date}T{time_str}" TO "{current_year}-{date}T{time_str}"]'
+        time_values["device_record_time_value_vital"] = f'["{current_year}-{date}T{time_str}" TO "{current_year}-{date}T{time_str}"]'
     if fos_ace == "2" and vlog_metric:
         parts = vlog_metric.split(":")
-        device_record_time_value_vlog = parts[0]
+        time_values["device_record_time_value_vlog"] = parts[0]
     if fos_ace == "2" and vital_metric:
         device_record_time_start = vital_metric.find('Timestamp":"') + len('Timestamp":"')
         device_record_time_end = vital_metric.find('.000+00:00"', device_record_time_start)
         device_record_time = vital_metric[device_record_time_start:device_record_time_end]
-        device_record_time_value_vital = f'["{device_record_time}" TO "{device_record_time}"]'
-    else:
-        print()
+        time_values["device_record_time_value_vital"] = f'["{device_record_time}" TO "{device_record_time}"]'
+    return time_values
 
-def metric_time_agg():
-    global device_record_time_value_vlog, device_record_time_value_vital
-    if fos_ace == "1" and vlog_metric:
-        parts = vlog_metric.split()
-        date = parts[0]
+def metric_time_agg(metric_input_dictionary):
+    """Returns time values for aggregate metrics."""
+    fos_ace = metric_input_dictionary.get("fos_ace")
+    vlog_metric = metric_input_dictionary.get("vlog_metric")
+    vital_metric = metric_input_dictionary.get("vital_metric")
+    time_values = {}
+    logging.info("Extracting time info for agg")
+    if fos_ace == "1":
         current_year = datetime.now().year
-        device_record_time_value_vlog = f'["{current_year}-{date}" TO "{current_year}-{date}"]'
-    if fos_ace == "1" and vital_metric:
-        parts = vital_metric.split()
-        date = parts[0]
-        current_year = datetime.now().year
-        device_record_time_value_vital = f'["{current_year}-{date}" TO "{current_year}-{date}"]'
+        if vlog_metric:
+            parts = vlog_metric.split()
+            date = parts[0]
+            time_values["device_record_time_value_vlog"] = f'["{current_year}-{date}" TO "{current_year}-{date}"]'
+        if vital_metric:
+            parts = vital_metric.split()
+            date = parts[0]
+            time_values["device_record_time_value_vital"] = f'["{current_year}-{date}" TO "{current_year}-{date}"]'
     if fos_ace == "2" and vital_metric:
         device_record_time_start = vital_metric.find('Timestamp":"') + len('Timestamp":"')
         device_record_time_end = vital_metric.find('T', device_record_time_start)
         device_record_time = vital_metric[device_record_time_start:device_record_time_end]
-        device_record_time_value_vlog = f'["{device_record_time}" TO "{device_record_time}"]'
-        device_record_time_value_vital = device_record_time_value_vlog
-    else:
-        print()
+        time_values["device_record_time_value_vlog"] = time_values["device_record_time_value_vital"] = f'["{device_record_time}" TO "{device_record_time}"]'
+    return time_values
 
-def filter_values_vlog():
-    global operation_value_vlog, key_value_vlog, metadata_value_vlog, metadata1_value_vlog, metadata2_value_vlog, metadata3_value_vlog, metadata4_value_vlog
-    if 'wifiKDM:' in vlog_metric:
-        operation_start = vlog_metric.find('wifiKDM:') + len('wifiKDM:')
-        operation_end = vlog_metric.find(':', operation_start)
-        operation_value_vlog = vlog_metric[operation_start:operation_end]
-    if """operation":'""" in vlog_metric:
-        operation_start = vlog_metric.find("""operation":'""") + len("""operation":'""")
-        operation_end = vlog_metric.find("'", operation_start)
-        operation_value_vlog = vlog_metric[operation_start:operation_end]
-    if "key=" in vlog_metric:
-        key_start = vlog_metric.find("key=") + len("key=")
-        key_end = vlog_metric.find(";", key_start)
-        key_value_vlog = vlog_metric[key_start:key_end]
-    if 'key#' in vlog_metric:
-        key_start = vlog_metric.find('key#') + len('key#')
-        key_end = vlog_metric.find('$', key_start)
-        key_value_vlog = vlog_metric[key_start:key_end]
-    if "metadata=" in vlog_metric:
-        metadata_start = vlog_metric.find("metadata=") + len("metadata=")
-        metadata_end = vlog_metric.find(";", metadata_start)
-        metadata_value_vlog = vlog_metric[metadata_start:metadata_end]
-        if len(metadata_value_vlog) > 10:
-            metadata_start = vlog_metric.find("metadata=") + len("metadata=")
-            metadata_end = vlog_metric.find("!", metadata_start)
-            metadata_value_vlog = vlog_metric[metadata_start:metadata_end]
-    if 'metadata"#"' in vlog_metric:
-        metadata_start = vlog_metric.find('metadata"#"') + len('metadata"#"')
-        metadata_end = vlog_metric.find('"', metadata_start)
-        metadata_value_vlog = vlog_metric[metadata_start:metadata_end]
-    if "metadata#" in vlog_metric:
-        metadata_start = vlog_metric.find("metadata#") + len("metadata#")
-        metadata_end = vlog_metric.find("$", metadata_start)
-        metadata_value_vlog = vlog_metric[metadata_start:metadata_end]
-    if "metadata1=" in vlog_metric:
-        metadata1_start = vlog_metric.find("metadata1=") + len("metadata1=")
-        metadata1_end = vlog_metric.find(";", metadata1_start)
-        metadata1_value_vlog = vlog_metric[metadata1_start:metadata1_end]
-    if 'metadata1"#"' in vlog_metric:
-        metadata1_start = vlog_metric.find('metadata1"#"') + len('metadata1"#"')
-        metadata1_end = vlog_metric.find('"', metadata1_start)
-        metadata1_value_vlog = vlog_metric[metadata1_start:metadata1_end]
-    if 'metadata1#' in vlog_metric:
-        metadata1_start = vlog_metric.find('metadata1#') + len('metadata1#')
-        metadata1_end = vlog_metric.find('$', metadata1_start)
-        metadata1_value_vlog = vlog_metric[metadata1_start:metadata1_end]
-    if "metadata2=" in vlog_metric:
-        metadata2_start = vlog_metric.find("metadata2=") + len("metadata2=")
-        metadata2_end = vlog_metric.find(";", metadata2_start)
-        metadata2_value_vlog = vlog_metric[metadata2_start:metadata2_end]
-    if 'metadata2"#"' in vlog_metric:
-        metadata2_start = vlog_metric.find('metadata2"#"') + len('metadata2"#"')
-        metadata2_end = vlog_metric.find('"', metadata2_start)
-        metadata2_value_vlog = vlog_metric[metadata2_start:metadata2_end]
-    if 'metadata2#' in vlog_metric:
-        metadata2_start = vlog_metric.find('metadata2#') + len('metadata2#')
-        metadata2_end = vlog_metric.find('$', metadata2_start)
-        metadata2_value_vlog = vlog_metric[metadata2_start:metadata2_end]
-    if "metadata3=" in vlog_metric:
-        metadata3_start = vlog_metric.find("metadata3=") + len("metadata3=")
-        metadata3_end = vlog_metric.find(";", metadata3_start)
-        metadata3_value_vlog = vlog_metric[metadata3_start:metadata3_end]
-    if 'metadata3"#"' in vlog_metric:
-        metadata3_start = vlog_metric.find('metadata3"#"') + len('metadata3"#"')
-        metadata3_end = vlog_metric.find('"', metadata3_start)
-        metadata3_value_vlog = vlog_metric[metadata3_start:metadata3_end]
-    if 'metadata3#' in vlog_metric:
-        metadata3_start = vlog_metric.find('metadata3#') + len('metadata3#')
-        metadata3_end = vlog_metric.find('$', metadata3_start)
-        metadata3_value_vlog = vlog_metric[metadata3_start:metadata3_end]
-    if "metadata4=" in vlog_metric:
-        metadata4_start = vlog_metric.find("metadata4=") + len("metadata4=")
-        metadata4_end = vlog_metric.find(";", metadata4_start)
-        metadata4_value_vlog = vlog_metric[metadata4_start:metadata4_end]
-    if 'metadata4"#"' in vlog_metric:
-        metadata4_start = vlog_metric.find('metadata4"#"') + len('metadata4"#"')
-        metadata4_end = vlog_metric.find('"', metadata4_start)
-        metadata4_value_vlog = vlog_metric[metadata4_start:metadata4_end]
-    if 'metadata4#' in vlog_metric:
-        metadata4_start = vlog_metric.find('metadata4#') + len('metadata4#')
-        metadata4_end = vlog_metric.find('$', metadata4_start)
-        metadata4_value_vlog = vlog_metric[metadata4_start:metadata4_end]
-    else:
-        print()
+def filter_values_vlog(metric_input_dictionary):
+    """Returns the filter values dictionary for vlog metrics."""
+    vlog_metric = metric_input_dictionary.get("vlog_metric")
+    filter_values_vlog_dictionary = {}
+    logging.info("Extracting filter values from vlog metric")
+    for metric_type, metric_start_end_pos in start_end_pos_vlog.items():
+        for start_marker, end_marker in metric_start_end_pos:
+            value = extract_value(vlog_metric, start_marker, end_marker)
+            if value:
+                if metric_type == "operation":
+                    filter_values_vlog_dictionary["operation_value_vlog"] = value
+                elif metric_type == "key":
+                    filter_values_vlog_dictionary["key_value_vlog"] = value
+                elif metric_type == "metadata":
+                    filter_values_vlog_dictionary["metadata_value_vlog"] = value
+                    if len(filter_values_vlog_dictionary["metadata_value_vlog"]) > 10:
+                        metadata_start = vlog_metric.find("metadata=") + len("metadata=")
+                        metadata_end = vlog_metric.find("!", metadata_start)
+                        filter_values_vlog_dictionary["metadata_value_vlog"] = vlog_metric[metadata_start:metadata_end]
+                elif metric_type == "metadata1":
+                    filter_values_vlog_dictionary["metadata1_value_vlog"] = value
+                elif metric_type == "metadata2":
+                    filter_values_vlog_dictionary["metadata2_value_vlog"] = value
+                elif metric_type == "metadata3":
+                    filter_values_vlog_dictionary["metadata3_value_vlog"] = value
+                elif metric_type == "metadata4":
+                    filter_values_vlog_dictionary["metadata4_value_vlog"] = value
+                break
+    return filter_values_vlog_dictionary
 
-def filter_values_vital():
-    global version_value, operation_value_vital, key_value_vital, metadata_value_vital, metadata1_value_vital, metadata2_value_vital, metadata3_value_vital, metadata4_value_vital
-    if 'software_version=' in vital_metric:
-        version_start = vital_metric.find('software_version=') + len('software_version=')
-        version_end = vital_metric.find(';', version_start)
-        version_value = vital_metric[version_start:version_end]
-    if """_osFileTag":'""" in vital_metric:
-        version_start = vital_metric.find("""_osFileTag":'""") + len("""_osFileTag":'""")
-        version_end = vital_metric.find("'", version_start)
-        version_value = vital_metric[version_start:version_end]
-    if 'software_version"#"' in vital_metric:
-        version_start = vital_metric.find('software_version"#"') + len('software_version"#"')
-        version_end = vital_metric.find('"', version_start)
-        version_value = vital_metric[version_start:version_end]
-    if 'wifiKDM:' in vital_metric:
-        operation_start = vital_metric.find('wifiKDM:') + len('wifiKDM:')
-        operation_end = vital_metric.find(':', operation_start)
-        operation_value_vital = vital_metric[operation_start:operation_end]
-    if 'operation=' in vital_metric:
-        operation_start = vital_metric.find('operation=') + len('operation=')
-        operation_end = vital_metric.find(';', operation_start)
-        operation_value_vital = vital_metric[operation_start:operation_end]
-    if """operation":'""" in vital_metric:
-        operation_start = vital_metric.find("""operation":'""") + len("""operation":'""")
-        operation_end = vital_metric.find("'", operation_start)
-        operation_value_vital = vital_metric[operation_start:operation_end]
-    if "key=" in vital_metric:
-        key_start = vital_metric.find("key=") + len("key=")
-        key_end = vital_metric.find(";", key_start)
-        key_value_vital = vital_metric[key_start:key_end]
-    if """key":'""" in vital_metric:
-        key_start = vital_metric.find("""key":'""") + len("""key":'""")
-        key_end = vital_metric.find("'", key_start)
-        key_value_vital = vital_metric[key_start:key_end]
-    if '"key"#"' in vital_metric:
-        key_start = vital_metric.find('"key"#"') + len('"key"#"')
-        key_end = vital_metric.find('"', key_start)
-        key_value_vital = vital_metric[key_start:key_end]
-    if """Data=[['""" in vital_metric:
-        key_start = vital_metric.find("""Data=[['""") + len("""Data=[['""")
-        key_end = vital_metric.find("'", key_start)
-        key_value_vital = vital_metric[key_start:key_end]
-    if "metadata=" in vital_metric:
-        metadata_start = vital_metric.find("metadata=") + len("metadata=")
-        metadata_end = vital_metric.find(";", metadata_start)
-        metadata_value_vital = vital_metric[metadata_start:metadata_end]
-        if len(metadata_value_vital) > 10:
-            metadata_start = vital_metric.find("metadata=") + len("metadata=")
-            metadata_end = vital_metric.find("!", metadata_start)
-            metadata_value_vital = vital_metric[metadata_start:metadata_end]
-    if 'metadata"#"' in vital_metric:
-        metadata_start = vital_metric.find('metadata"#"') + len('metadata"#"')
-        metadata_end = vital_metric.find('"', metadata_start)
-        metadata_value_vital = vital_metric[metadata_start:metadata_end]
-    if """metadata":'""" in vital_metric:
-        metadata_start = vital_metric.find("""metadata":'""") + len("""metadata":'""")
-        metadata_end = vital_metric.find("'", metadata_start)
-        metadata_value_vital = vital_metric[metadata_start:metadata_end]
-    if "metadata1=" in vital_metric:
-        metadata1_start = vital_metric.find("metadata1=") + len("metadata1=")
-        metadata1_end = vital_metric.find(";", metadata1_start)
-        metadata1_value_vital = vital_metric[metadata1_start:metadata1_end]
-    if 'metadata1"#"' in vital_metric:
-        metadata1_start = vital_metric.find('metadata1"#"') + len('metadata1"#"')
-        metadata1_end = vital_metric.find('"', metadata1_start)
-        metadata1_value_vital = vital_metric[metadata1_start:metadata1_end]
-    if """metadata1":'""" in vital_metric:
-        metadata1_start = vital_metric.find("""metadata1":'""") + len("""metadata1":'""")
-        metadata1_end = vital_metric.find("'", metadata1_start)
-        metadata1_value_vital = vital_metric[metadata1_start:metadata1_end]
-    if "metadata2=" in vital_metric:
-        metadata2_start = vital_metric.find("metadata2=") + len("metadata2=")
-        metadata2_end = vital_metric.find(";", metadata2_start)
-        metadata2_value_vital = vital_metric[metadata2_start:metadata2_end]
-    if 'metadata2"#"' in vital_metric:
-        metadata2_start = vital_metric.find('metadata2"#"') + len('metadata2"#"')
-        metadata2_end = vital_metric.find('"', metadata2_start)
-        metadata2_value_vital = vital_metric[metadata2_start:metadata2_end]
-    if """metadata2":'""" in vital_metric:
-        metadata2_start = vital_metric.find("""metadata2":'""") + len("""metadata2":'""")
-        metadata2_end = vital_metric.find("'", metadata2_start)
-        metadata2_value_vital = vital_metric[metadata2_start:metadata2_end]
-    if "metadata3=" in vital_metric:
-        metadata3_start = vital_metric.find("metadata3=") + len("metadata3=")
-        metadata3_end = vital_metric.find(";", metadata3_start)
-        metadata3_value_vital = vital_metric[metadata3_start:metadata3_end]
-    if 'metadata3"#"' in vital_metric:
-        metadata3_start = vital_metric.find('metadata3"#"') + len('metadata3"#"')
-        metadata3_end = vital_metric.find('"', metadata3_start)
-        metadata3_value_vital = vital_metric[metadata3_start:metadata3_end]
-    if """metadata3":'""" in vital_metric:
-        metadata3_start = vital_metric.find("""metadata3":'""") + len("""metadata3":'""")
-        metadata3_end = vital_metric.find("'", metadata3_start)
-        metadata3_value_vital = vital_metric[metadata3_start:metadata3_end]
-    if "metadata4=" in vital_metric:
-        metadata4_start = vital_metric.find("metadata4=") + len("metadata4=")
-        metadata4_end = vital_metric.find(";", metadata4_start)
-        metadata4_value_vital = vital_metric[metadata4_start:metadata4_end]
-    if 'metadata4"#"' in vital_metric:
-        metadata4_start = vital_metric.find('metadata4"#"') + len('metadata4"#"')
-        metadata4_end = vital_metric.find('"', metadata4_start)
-        metadata4_value_vital = vital_metric[metadata4_start:metadata4_end]
-    if """metadata4":'""" in vital_metric:
-        metadata4_start = vital_metric.find("""metadata4":'""") + len("""metadata4":'""")
-        metadata4_end = vital_metric.find("'", metadata4_start)
-        metadata4_value_vital = vital_metric[metadata4_start:metadata4_end]
-    else:
-        print()
 
-def search_filter():
-    global Filter_kdm, Filter_minerva
+def filter_values_vital(metric_input_dictionary):
+    """Returns the filter values dictionary for vital metrics."""
+    vital_metric = metric_input_dictionary.get("vital_metric")
+    filter_values_vital_dictionary = {}
+    logging.info("Extracting filter values from vital metric")
+    for metric_type, metric_start_end_pos in start_end_pos_vital.items():
+        for start_marker, end_marker in metric_start_end_pos:
+            value = extract_value(vital_metric, start_marker, end_marker)
+            if value:
+                if metric_type == "version":
+                    filter_values_vital_dictionary["version_value"] = value
+                elif metric_type == "operation":
+                    filter_values_vital_dictionary["operation_value_vital"] = value
+                elif metric_type == "key":
+                    filter_values_vital_dictionary["key_value_vital"] = value
+                elif metric_type == "metadata":
+                    filter_values_vital_dictionary["metadata_value_vital"] = value
+                    if len(filter_values_vital_dictionary["metadata_value_vital"]) > 10:
+                        metadata_start = vital_metric.find("metadata=") + len("metadata=")
+                        metadata_end = vital_metric.find("!", metadata_start)
+                        filter_values_vital_dictionary["metadata_value_vital"] = vital_metric[metadata_start:metadata_end]
+                elif metric_type == "metadata1":
+                    filter_values_vital_dictionary["metadata1_value_vital"] = value
+                elif metric_type == "metadata2":
+                    filter_values_vital_dictionary["metadata2_value_vital"] = value
+                elif metric_type == "metadata3":
+                    filter_values_vital_dictionary["metadata3_value_vital"] = value
+                elif metric_type == "metadata4":
+                    filter_values_vital_dictionary["metadata4_value_vital"] = value
+                break
+    return filter_values_vital_dictionary
+
+def search_filter(user_detail_dictionary, metric_input_dictionary, time_values, filter_values_vital_dictionary, filter_values_vlog_dictionary):
+    """Returns a dictionary with search filter queries."""
+    raw_agg = user_detail_dictionary.get("raw_agg")
+    device_name = metric_input_dictionary.get("device_name")
+    ota_pool = metric_input_dictionary.get("ota_pool")
+    device_type = metric_input_dictionary.get("device_type")
+    vlog_metric = metric_input_dictionary.get("vlog_metric")
+    vital_metric = metric_input_dictionary.get("vital_metric")
+    version_value = filter_values_vital_dictionary.get("version_value")
+    operation_value_vlog = filter_values_vlog_dictionary.get("operation_value_vlog")
+    operation_value_vital = filter_values_vital_dictionary.get("operation_value_vital")
+    device_record_time_value_vlog = time_values.get("device_record_time_value_vlog")
+    device_record_time_value_vital = time_values.get("device_record_time_value_vital")
+    key_value_vlog = filter_values_vlog_dictionary.get("key_value_vlog")
+    key_value_vital = filter_values_vital_dictionary.get("key_value_vital")
+    metadata_value_vlog = filter_values_vlog_dictionary.get("metadata_value_vlog")
+    metadata_value_vital = filter_values_vital_dictionary.get("metadata_value_vital")
+    metadata1_value_vlog = filter_values_vlog_dictionary.get("metadata1_value_vlog")
+    metadata2_value_vlog = filter_values_vlog_dictionary.get("metadata2_value_vlog")
+    metadata3_value_vlog = filter_values_vlog_dictionary.get("metadata3_value_vlog")
+    metadata4_value_vlog = filter_values_vlog_dictionary.get("metadata4_value_vlog")
+    metadata1_value_vital = filter_values_vital_dictionary.get("metadata1_value_vital")
+    metadata2_value_vital = filter_values_vital_dictionary.get("metadata2_value_vital")
+    metadata3_value_vital = filter_values_vital_dictionary.get("metadata3_value_vital")
+    metadata4_value_vital = filter_values_vital_dictionary.get("metadata4_value_vital")
     Filter_kdm = f"software_version:{version_value} AND device_family:{device_name} AND operation:{operation_value_vlog} AND pool:{ota_pool} AND device_type:{device_type} AND device_record_time:{device_record_time_value_vlog}"
     Filter_minerva = f"software_version:{version_value} AND device_family:{device_name} AND operation:{operation_value_vital} AND pool:{ota_pool} AND device_type:{device_type} AND device_record_time:{device_record_time_value_vital}"
-    if any(value in vlog_metric for value in key):
-        Filter_kdm += f" AND key:{key_value_vlog}"
-    if any(value in vlog_metric for value in metadata):
-        Filter_kdm += f" AND metadata:{metadata_value_vlog}"
-    if any(value in vlog_metric for value in metadata1):
-        Filter_kdm += f" AND d_metadata1:{metadata1_value_vlog}"
-    if any(value in vlog_metric for value in metadata2):
-        Filter_kdm += f" AND d_metadata2:{metadata2_value_vlog}"
-    if any(value in vlog_metric for value in metadata3):
-        Filter_kdm += f" AND d_metadata3:{metadata3_value_vlog}"
-    if any(value in vlog_metric for value in metadata4):
-        Filter_kdm += f" AND d_metadata4:{metadata4_value_vlog}"
-    if any(value in vital_metric for value in key):
-        Filter_minerva += f" AND key:{key_value_vital}"
-    if any(value in vital_metric for value in metadata):
-        Filter_minerva += f" AND metadata:{metadata_value_vital}"
-    if any(value in vital_metric for value in metadata1):
-        Filter_minerva += f" AND d_metadata1:{metadata1_value_vital}"
-    if any(value in vital_metric for value in metadata2):
-        Filter_minerva += f" AND d_metadata2:{metadata2_value_vital}"
-    if any(value in vital_metric for value in metadata3):
-        Filter_minerva += f" AND d_metadata3:{metadata3_value_vital}"
-    if any(value in vital_metric for value in metadata4):
-        Filter_minerva += f" AND d_metadata4:{metadata4_value_vital}"
+
+    logging.info("Creating KDM search filter")
+    additional_filters = [
+        ("key", key_value_vlog, key),
+        ("metadata", metadata_value_vlog, metadata),
+        ("d_metadata1", metadata1_value_vlog, metadata1),
+        ("d_metadata2", metadata2_value_vlog, metadata2),
+        ("d_metadata3", metadata3_value_vlog, metadata3),
+        ("d_metadata4", metadata4_value_vlog, metadata4)
+    ]
+    for filter_name, filter_value, filter_list in additional_filters:
+        if any(value in vlog_metric for value in filter_list):
+            Filter_kdm += f" AND {filter_name}:{filter_value}"
+
+    logging.info("Creating minerva search filter")
+    additional_filters_vital = [
+        ("key", key_value_vital, key),
+        ("metadata", metadata_value_vital, metadata),
+        ("d_metadata1", metadata1_value_vital, metadata1),
+        ("d_metadata2", metadata2_value_vital, metadata2),
+        ("d_metadata3", metadata3_value_vital, metadata3),
+        ("d_metadata4", metadata4_value_vital, metadata4)
+    ]
+    for filter_name, filter_value, filter_list in additional_filters_vital:
+        if any(value in vital_metric for value in filter_list):
+            Filter_minerva += f" AND {filter_name}:{filter_value}"
+
     if raw_agg == "2":
         Filter_kdm += " AND program:wifiKDM"
         Filter_minerva += " AND program:wifiKDM_minerva"
-    else:
-        print()
+    return {
+        "Filter_kdm": Filter_kdm,
+        "Filter_minerva": Filter_minerva
+    }
 
-def raw():
-    print("Prerequisites: Metric should be emitted from device side and kept connected to stable internet for more then 4 hours")
-    print()
+def raw(user_detail_dictionary, search_filter_dictionary, metric_input_dictionary, filter_values_vital_dictionary, filter_values_vlog_dictionary):
+    """
+    Function to capture raw metrics from kibana dashboard.
+
+    Args:
+        user_detail_dictionary (dict): Contains user credentials and path.
+        search_filter_dictionary (dict): Contains KDM and Minerva filter queries.
+        metric_input_dictionary (dict): Contains input parameters for metrics.
+        filter_values_vital_dictionary (dict): Contains filter values for vital metrics.
+        filter_values_vlog_dictionary (dict): Contains filter values for vlog metrics.
+
+    Returns:
+        Kibana screenshots
+        Test results
+    """
+    user_name = user_detail_dictionary.get("user_name")
+    password = user_detail_dictionary.get("password")
+    Path = user_detail_dictionary.get("path")
+    screenshot = metric_input_dictionary.get("screenshot")
+    Filter_kdm = search_filter_dictionary.get("Filter_kdm")
+    Filter_minerva = search_filter_dictionary.get("Filter_minerva")
+    version_value = filter_values_vital_dictionary.get("version_value")
+    operation_value_vlog = filter_values_vlog_dictionary.get("operation_value_vlog")
+    operation_value_vital = filter_values_vital_dictionary.get("operation_value_vital")
+    print("\nPrerequisites: Metric should be emitted from device side and kept connected to stable internet for more then 4 hours\n")
     time.sleep(3)
     driver = webdriver.Firefox()
     driver.maximize_window()
+    logging.info("Entering raw webpage")
     driver.get("https://kdm-raw-es.labcollab.net/app/kibana#/discover?_g=h@44136fa&_a=h@b49d08f")
-    userid = WebDriverWait(driver,100).until(
-        EC.element_to_be_clickable((By.XPATH,"//div/div/form/input[@id='user_name_field']"))
-    )
+    ui_switch = driver.find_element(By.ID,"switch-to-new-ui-button")
+    if ui_switch:
+        ui_switch.click()
+        logging.info("Switching to new UI")
+        driver.find_element(By.XPATH,"//ul/li/div/div/div/div/button/span[contains(text(),'Switch')]").click()
+        logging.info("Switching back to old UI")
+        userid = WebDriverWait(driver,100).until(
+            EC.element_to_be_clickable((By.XPATH,"//div/div/form/input[@id='user_name_field']"))
+        )
+    else:
+        userid = WebDriverWait(driver, 100).until(
+            EC.element_to_be_clickable((By.XPATH, "//div/div/form/input[@id='user_name_field']"))
+        )
+    logging.info("Entering user name")
     userid.send_keys(user_name)
     driver.find_element(By.XPATH,"//div/div/form/input[@id='user_name_btn']").click()
+    logging.info("Entering password")
     WebDriverWait(driver,100).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/form/input[@id='password_field']"))
     ).send_keys(password)
     driver.find_element(By.XPATH,"//div/div/form/input[@id='password_btn']").click()
-    search = WebDriverWait(driver,100).until(
-        EC.element_to_be_clickable((By.XPATH,"//div/div/form/div/div/input[@placeholder='Search...']"))
+    time.sleep(10)
+    driver.refresh()
+    time.sleep(5)
+    logging.info("Waiting for search bar")
+    search = WebDriverWait(driver, 120).until(
+        EC.element_to_be_clickable((By.XPATH, "//div/div/form/div/div/input[@placeholder='Search...']"))
     )
-    time.sleep(2)
-    pyautogui.hotkey("backspace")
-    time.sleep(2)
+    logging.info("Search bar found, clearing and entering filter query for vlog")
+    time.sleep(3)
+    search.clear()
     search.send_keys(Filter_kdm)
+    logging.info("KDM filter query entered")
     time.sleep(3)
     WebDriverWait(driver,20).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/div/pretty-duration[@from='timefilter.time.from']"))
     ).click()
+    logging.info("Selecting time range")
     WebDriverWait(driver,20).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/div/div/ul/li/a[contains(text(),'Last 7 days')]"))
     ).click()
     time.sleep(3)
-    pyautogui.hotkey("Ctrl", "R")
+    driver.refresh()
     time.sleep(2)
     try:
         kdm_results = WebDriverWait(driver,30).until(
@@ -380,27 +381,32 @@ def raw():
         time.sleep(3)
         kdm_results_text = kdm_results.text
         if version_value in kdm_results_text:
-            WebDriverWait(driver,20).until(
+            WebDriverWait(driver,30).until(
               EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
+            logging.info("Selecting and viewing the output seen for KDM")
             full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer/div[@class='doc-viewer']")
             kdm_file_path = f"{Path}{screenshot}_kdm.png"
             full_capture.screenshot(kdm_file_path)
             print(f"Screenshot saved to {kdm_file_path}")
         else:
             print()
+            WebDriverWait(driver, 30).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, "//div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
+            )
+            full_capture = driver.find_element(By.XPATH, "//div[@class='discover-wrapper col-md-10']")
             kdm_file_path = f"{Path}{screenshot}_kdm.png"
-            screen_capture = ImageGrab.grab()
-            screen_capture.save(kdm_file_path)
+            full_capture.screenshot(kdm_file_path)
             print(f"Screenshot saved to {kdm_file_path}")
     except NoSuchElementException and TimeoutException:
         print()
-        WebDriverWait(driver,20).until(
+        WebDriverWait(driver,30).until(
             EC.element_to_be_clickable((By.XPATH,"//div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
         )
+        full_capture = driver.find_element(By.XPATH, "//div[@class='discover-wrapper col-md-10']")
         kdm_file_path = f"{Path}{screenshot}_kdm.png"
-        screen_capture = ImageGrab.grab()
-        screen_capture.save(kdm_file_path)
+        full_capture.screenshot(kdm_file_path)
         print(f"Screenshot saved to {kdm_file_path}")
     time.sleep(2)
     try:
@@ -421,13 +427,15 @@ def raw():
     search = WebDriverWait(driver,20).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/form/div/div/input[@placeholder='Search...']"))
     )
+    logging.info("Search bar found, clearing and entering filter query for minerva")
     search.clear()
     time.sleep(2)
     search.send_keys(Filter_minerva)
+    logging.info("Minerva filter query entered")
     time.sleep(2)
     driver.find_element(By.XPATH,"//form/div/div/button/span[@class='fa fa-search']").click()
     time.sleep(2)
-    pyautogui.hotkey("Ctrl", "R")
+    driver.refresh()
     time.sleep(2)
     try:
         minerva_results = WebDriverWait(driver,20).until(
@@ -436,27 +444,32 @@ def raw():
         time.sleep(3)
         minerva_results_text = minerva_results.text
         if version_value in minerva_results_text:
-            WebDriverWait(driver,20).until(
+            WebDriverWait(driver,30).until(
               EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
+            logging.info("Selecting and viewing the output seen for minerva")
             full_capture = driver.find_element(By.XPATH, "//div/table/tbody/tr/td/doc-viewer/div[@class='doc-viewer']")
             minerva_file_path = f"{Path}{screenshot}_minerva.png"
             full_capture.screenshot(minerva_file_path)
             print(f"Screenshot saved to {minerva_file_path}")
         else:
             print()
+            WebDriverWait(driver, 30).until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, "//div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
+            )
+            full_capture = driver.find_element(By.XPATH, "//div[@class='discover-wrapper col-md-10']")
             minerva_file_path = f"{Path}{screenshot}_minerva.png"
-            screen_capture = ImageGrab.grab()
-            screen_capture.save(minerva_file_path)
+            full_capture.screenshot(minerva_file_path)
             print(f"Screenshot saved to {minerva_file_path}")
     except NoSuchElementException and TimeoutException:
         print()
-        WebDriverWait(driver,20).until(
+        WebDriverWait(driver,30).until(
             EC.element_to_be_clickable((By.XPATH,"//div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
         )
+        full_capture = driver.find_element(By.XPATH, "//div[@class='discover-wrapper col-md-10']")
         minerva_file_path = f"{Path}{screenshot}_minerva.png"
-        screen_capture = ImageGrab.grab()
-        screen_capture.save(minerva_file_path)
+        full_capture.screenshot(minerva_file_path)
         print(f"Screenshot saved to {minerva_file_path}")
     time.sleep(2)
     try:
@@ -474,41 +487,83 @@ def raw():
         print("Note:")
         print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
         print("If still metric is not seen raise a jira")
-    pyautogui.hotkey("alt", "tab")
 
-def agg():
-    print("Prerequisites: Metric should be emitted from device side and kept connected to stable internet for more then 8 hours")
-    print()
+
+def agg(user_detail_dictionary, search_filter_dictionary, metric_input_dictionary, filter_values_vital_dictionary, filter_values_vlog_dictionary):
+    """
+    Function to capture aggregated metrics from kibana dashboard.
+
+    Args:
+        user_detail_dictionary (dict): Contains user credentials and path.
+        search_filter_dictionary (dict): Contains KDM and Minerva filter queries.
+        metric_input_dictionary (dict): Contains input parameters for metrics.
+        filter_values_vital_dictionary (dict): Contains filter values for vital metrics.
+        filter_values_vlog_dictionary (dict): Contains filter values for vlog metrics.
+
+    Returns:
+        Kibana screenshots
+        Test results
+    """
+    user_name = user_detail_dictionary.get("user_name")
+    password = user_detail_dictionary.get("password")
+    Path = user_detail_dictionary.get("path")
+    screenshot = metric_input_dictionary.get("screenshot")
+    Filter_kdm = search_filter_dictionary.get("Filter_kdm")
+    Filter_minerva = search_filter_dictionary.get("Filter_minerva")
+    version_value = filter_values_vital_dictionary.get("version_value")
+    operation_value_vlog = filter_values_vlog_dictionary.get("operation_value_vlog")
+    operation_value_vital = filter_values_vital_dictionary.get("operation_value_vital")
+    print("\nPrerequisites: Metric should be emitted from device side and kept connected to stable internet for more then 8 hours\n")
     time.sleep(3)
     driver = webdriver.Firefox()
     driver.maximize_window()
+    logging.info("Entering agg webpage")
     driver.get("https://kdm-agg-es.labcollab.net/app/kibana#/discover?_g=h@44136fa&_a=h@b49d08f")
-    userid = WebDriverWait(driver,100).until(
-        EC.element_to_be_clickable((By.XPATH,"//div/div/form/input[@id='user_name_field']"))
-    )
+    ui_switch = driver.find_element(By.ID,"switch-to-new-ui-button")
+    if ui_switch:
+        ui_switch.click()
+        logging.info("Switching to new UI")
+        driver.find_element(By.XPATH,"//ul/li/div/div/div/div/button/span[contains(text(),'Switch')]").click()
+        logging.info("Switching back to old UI")
+        userid = WebDriverWait(driver,100).until(
+            EC.element_to_be_clickable((By.XPATH,"//div/div/form/input[@id='user_name_field']"))
+        )
+    else:
+        userid = WebDriverWait(driver,100).until(
+            EC.element_to_be_clickable((By.XPATH,"//div/div/form/input[@id='user_name_field']"))
+        )
+    logging.info("Entering user name")
     userid.send_keys(user_name)
     driver.find_element(By.XPATH,"//div/div/form/input[@id='user_name_btn']").click()
+    logging.info("Entering password")
     WebDriverWait(driver,100).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/form/input[@id='password_field']"))
     ).send_keys(password)
     driver.find_element(By.XPATH,"//div/div/form/input[@id='password_btn']").click()
+    time.sleep(10)
+    driver.refresh()
+    time.sleep(5)
+    logging.info("Waiting for search bar")
     search = WebDriverWait(driver,100).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/query-bar/form/div/div/div/input[@data-test-subj='queryInput']"))
     )
+    logging.info("Search bar found, clearing and entering filter query for vlog")
     time.sleep(3)
-    pyautogui.hotkey("backspace")
+    search.clear()
     search.send_keys(Filter_kdm)
+    logging.info("KDM filter query entered")
     time.sleep(3)
     WebDriverWait(driver,20).until(
         EC.element_to_be_clickable((By.XPATH,"//div/discover-app/kbn-top-nav/div/div/div/div/div[@class='kuiLocalMenu']"))
     ).click()
+    logging.info("Selecting time range")
     WebDriverWait(driver,20).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/div/div/div/ul/li/a[contains(text(), 'Last 7 days')]"))
     ).click()
     time.sleep(2)
     driver.find_element(By.XPATH, "//button/span[@class='fa fa-search']").click()
     time.sleep(2)
-    pyautogui.hotkey("Ctrl", "R")
+    driver.refresh()
     time.sleep(2)
     try:
         kdm_results = WebDriverWait(driver,30).until(
@@ -517,27 +572,32 @@ def agg():
         time.sleep(3)
         kdm_results_text = kdm_results.text
         if version_value in kdm_results_text:
-            WebDriverWait(driver,20).until(
+            WebDriverWait(driver,30).until(
                 EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
+            logging.info("Selecting and viewing the output seen for KDM")
             full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer[@hit='row']")
             kdm_file_path = f"{Path}{screenshot}_kdm.png"
             full_capture.screenshot(kdm_file_path)
             print(f"Screenshot saved to {kdm_file_path}")
         else:
             print()
+            WebDriverWait(driver, 30).until(
+                EC.element_to_be_clickable((By.XPATH,
+                                            "//main/div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
+            )
+            full_capture = driver.find_element(By.XPATH, "//div[@class='discover-wrapper col-md-10']")
             kdm_file_path = f"{Path}{screenshot}_kdm.png"
-            screen_capture = ImageGrab.grab()
-            screen_capture.save(kdm_file_path)
+            full_capture.screenshot(kdm_file_path)
             print(f"Screenshot saved to {kdm_file_path}")
     except NoSuchElementException and TimeoutException:
         print()
-        WebDriverWait(driver,20).until(
+        WebDriverWait(driver,30).until(
             EC.element_to_be_clickable((By.XPATH,"//main/div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
         )
+        full_capture = driver.find_element(By.XPATH, "//div[@class='discover-wrapper col-md-10']")
         kdm_file_path = f"{Path}{screenshot}_kdm.png"
-        screen_capture = ImageGrab.grab()
-        screen_capture.save(kdm_file_path)
+        full_capture.screenshot(kdm_file_path)
         print(f"Screenshot saved to {kdm_file_path}")
     time.sleep(2)
     try:
@@ -558,13 +618,15 @@ def agg():
     search = WebDriverWait(driver,20).until(
         EC.element_to_be_clickable((By.XPATH,"//div/div/query-bar/form/div/div/div/input[@data-test-subj='queryInput']"))
     )
+    logging.info("Search bar found, clearing and entering filter query for minerva")
     search.clear()
     time.sleep(2)
     search.send_keys(Filter_minerva)
+    logging.info("Minerva filter query entered")
     time.sleep(2)
     driver.find_element(By.XPATH,"//form/div/div/button/span[@class='fa fa-search']").click()
     time.sleep(2)
-    pyautogui.hotkey("Ctrl", "R")
+    driver.refresh()
     time.sleep(2)
     try:
         minerva_results = WebDriverWait(driver,30).until(
@@ -573,27 +635,32 @@ def agg():
         time.sleep(3)
         minerva_results_text = minerva_results.text
         if version_value in minerva_results_text:
-            WebDriverWait(driver,20).until(
+            WebDriverWait(driver,30).until(
                 EC.element_to_be_clickable((By.XPATH,"//div/table/tbody/tr/td[@ng-click='toggleRow()']"))
             ).click()
+            logging.info("Selecting and viewing the output seen for minerva")
             full_capture = driver.find_element(By.XPATH,"//div/table/tbody/tr/td/doc-viewer[@hit='row']")
             minerva_file_path = f"{Path}{screenshot}_minerva.png"
             full_capture.screenshot(minerva_file_path)
             print(f"Screenshot saved to {minerva_file_path}")
         else:
             print()
+            WebDriverWait(driver, 30).until(
+                EC.element_to_be_clickable((By.XPATH,
+                                            "//main/div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
+            )
+            full_capture = driver.find_element(By.XPATH, "//div[@class='discover-wrapper col-md-10']")
             minerva_file_path = f"{Path}{screenshot}_minerva.png"
-            screen_capture = ImageGrab.grab()
-            screen_capture.save(minerva_file_path)
+            full_capture.screenshot(minerva_file_path)
             print(f"Screenshot saved to {minerva_file_path}")
     except NoSuchElementException and TimeoutException:
         print()
-        WebDriverWait(driver,20).until(
+        WebDriverWait(driver,30).until(
             EC.element_to_be_clickable((By.XPATH,"//main/div/div/div/discover-no-results/div/div/h1[contains(text(),'No results found ')]"))
         )
+        full_capture = driver.find_element(By.XPATH, "//div[@class='discover-wrapper col-md-10']")
         minerva_file_path = f"{Path}{screenshot}_minerva.png"
-        screen_capture = ImageGrab.grab()
-        screen_capture.save(minerva_file_path)
+        full_capture.screenshot(minerva_file_path)
         print(f"Screenshot saved to {minerva_file_path}")
     time.sleep(2)
     try:
@@ -611,21 +678,43 @@ def agg():
         print("Note:")
         print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
         print("If still metric is not seen raise a jira")
-    pyautogui.hotkey("alt", "tab")
+
 
 def raw_agg_select():
-    user_detail()
-    metric_input()
+    """
+    Selects and initiates either raw or aggregated metric validation based on user configuration.
+
+    The function checks the `raw_agg` setting from the user details dictionary. If `raw_agg` is "1",
+    it triggers the `raw()` function to validate raw metrics. Otherwise, it triggers the `agg()` function
+    to validate aggregated metrics.
+
+    Helper functions (`metric_time_raw()`, `metric_time_agg()`, `filter_values_vlog()`, `filter_values_vital()`,
+    and `search_filter()`) are used to generate necessary input for the metric validation process.
+
+    Args:
+        None
+
+    Returns:
+        None
+
+    Example:
+        raw_agg_select()  # Executes raw or aggregated metric validation based on the `raw_agg` setting.
+    """
+    user_detail_dictionary = user_detail()
+    metric_input_dictionary = metric_input()
+    raw_agg = user_detail_dictionary.get("raw_agg")
     if raw_agg == "1":
-        metric_time_raw()
-        filter_values_vlog()
-        filter_values_vital()
-        search_filter()
-        raw()
+        time_values = metric_time_raw(metric_input_dictionary)
+        filter_values_vlog_dictionary = filter_values_vlog(metric_input_dictionary)
+        filter_values_vital_dictionary = filter_values_vital(metric_input_dictionary)
+        search_filter_dictionary = search_filter(user_detail_dictionary, metric_input_dictionary, time_values, filter_values_vital_dictionary, filter_values_vlog_dictionary)
+        raw(user_detail_dictionary, search_filter_dictionary, metric_input_dictionary, filter_values_vital_dictionary, filter_values_vlog_dictionary)
     else:
-        metric_time_agg()
-        filter_values_vlog()
-        filter_values_vital()
-        search_filter()
-        agg()
+        time_values = metric_time_agg(metric_input_dictionary)
+        filter_values_vlog_dictionary = filter_values_vlog(metric_input_dictionary)
+        filter_values_vital_dictionary = filter_values_vital(metric_input_dictionary)
+        search_filter_dictionary = search_filter(user_detail_dictionary, metric_input_dictionary, time_values, filter_values_vital_dictionary, filter_values_vlog_dictionary)
+        agg(user_detail_dictionary, search_filter_dictionary, metric_input_dictionary, filter_values_vital_dictionary, filter_values_vlog_dictionary)
+
 raw_agg_select()
+
