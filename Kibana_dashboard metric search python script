@@ -7,230 +7,338 @@ from selenium.webdriver.common.by import By
 import getpass
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from datetime import datetime
 
-Windows_Linux = input("""For Windows = Enter 1
-For Linux = Enter 2
-Windows or Linux: """)
-print()
-if Windows_Linux == "1":
-    Path = "c:/Users/dswinfre/Pictures/"
-else: 
-    Path = "/home/ANT.AMAZON.COM/dswinfre/Pictures/"
-user_name = input("Enter user name: ")
-crown_password = getpass.getpass("Enter crowd password: ")
-zukey = input("Press Zukey: ")
-password = crown_password + zukey
-screenshot = input("Screen shot name: ")
-print()
+vitals_build = ['software_version=', """_osFileTag":'""", 'software_version"#"', "clientTimestamp"]
+key = ["key=", """key":'""", 'key":', '"key"#"', 'key#', """Data=[['"""]
+metadata = ["metadata=", 'metadata"#"', """metadata":'""", "metadata#"]
+metadata1 = ["metadata1=", 'metadata1"#"', """metadata1":'""", "metadata1#"]
+metadata2 = ["metadata2=", 'metadata2"#"', """metadata2":'""", "metadata2#"]
+metadata3 = ["metadata3=", 'metadata3"#"', """metadata3":'""", "metadata3#"]
+metadata4 = ["metadata4=", 'metadata4"#"', """metadata4":'""", "metadata4#"]
 
-def met():
-    global device_name
-    global ota_pool
-    global metric
-    global version_value
+def user_detail():
+    global user_name, crown_password, zukey, password, Windows_Linux, raw_agg, Path
+    user_name = input("Enter user name: ")
+    crown_password = getpass.getpass("Enter crowd password: ")
+    zukey = input("Press Zukey: ")
+    password = crown_password + zukey
+    print()
+    Windows_Linux = input("For Windows = Enter 1\nFor Linux = Enter 2\nWindows or Linux: ")
+    windows_path = f"c:/Users/{user_name}/Pictures/"
+    linux_path = f"/home/ANT.AMAZON.COM/{user_name}/Pictures/"
+    if Windows_Linux == "1":
+        Path = windows_path
+    else:
+        Path = linux_path
+    print()
+    raw_agg = input("For Raw = Enter 1\nFor Agg = Enter 2\nRaw or Agg: ")
+    print()
+
+def metric_input():
+    global device_name, device_type, ota_pool, version_value, vlog_metric, vital_metric, vlog_vitals, fos_ace, device_record_time_value, screenshot
     device_name = input("Enter device name: ")
     ota_pool = input("Enter ota group: ")
-    vlog_vitals = input("""For vlog input = Enter 1
-For vitals input = Enter 2
-Vlog or Vitals: """)
+    device_type = input("Enter device type: ")
+    screenshot = input("Screen shot name: ")
     print()
-    if vlog_vitals == "1":
-        print("You have selected Vlog input")
-        print()
-        version_value = input("Enter build: ")
-    else:
-        print("You have selected Vitals input")
-        print("Note: Input vital metric contains build info")
-        print()
+    fos_ace = input("""For FOS device = Enter 1\nFor ACE device = Enter 2\nFOS or ACE device: """)
+    print()
     while True:
-        metric = input("Enter metric: ")
-        vitals_build = ['software_version=', """_osFileTag":'""", 'software_version"#"', "clientTimestamp"]
-        if vlog_vitals == "1" and any(vitals in metric for vitals in vitals_build):
+        while True:
+            vlog_metric = input("Enter vlog metric: ")
+            print()
+            if not any(vitals in vlog_metric for vitals in vitals_build):
+                break
             print("Error: Metric mismatches")
             print()
-            continue
-        if vlog_vitals == "2" and not any(vitals in metric for vitals in vitals_build):
+        while True:
+            vital_metric = input("Note: Input vital metric contains build info\nEnter vitals metric: ")
+            print()
+            if any(vitals in vital_metric for vitals in vitals_build):
+                break
             print("Error: Metric mismatches")
             print()
-            continue
-        else:
-            break
-met()
+        break
 
-if 'wifiKDM:' in metric:
-    operation_start = metric.find('wifiKDM:') + len('wifiKDM:')
-    operation_end = metric.find(':',operation_start)
-    operation_value = metric[operation_start:operation_end]
-if 'operation=' in metric:
-    operation_start = metric.find('operation=') + len('operation=')
-    operation_end = metric.find(';',operation_start)
-    operation_value = metric[operation_start:operation_end]
-if """operation":'""" in metric:
-    operation_start = metric.find("""operation":'""") + len("""operation":'""")
-    operation_end = metric.find("'",operation_start)
-    operation_value = metric[operation_start:operation_end]
-if 'software_version=' in metric:
-    version_start = metric.find('software_version=') + len('software_version=')
-    version_end = metric.find(';',version_start)
-    version_value = metric[version_start:version_end]
-if """_osFileTag":'""" in metric:
-    version_start = metric.find("""_osFileTag":'""") + len("""_osFileTag":'""")
-    version_end = metric.find("'",version_start)
-    version_value = metric[version_start:version_end]
-if 'software_version"#"' in metric:
-    version_start = metric.find('software_version"#"') + len('software_version"#"')
-    version_end = metric.find('"',version_start)
-    version_value = metric[version_start:version_end]
-if "key=" in metric:
-    key_start = metric.find("key=") + len("key=")
-    key_end = metric.find(";",key_start)
-    key_value = metric[key_start:key_end]
-if 'key":' in metric:
-    key_start = metric.find('key":') + len('key":')
-    key_end = metric.find(",",key_start)
-    key_value = metric[key_start:key_end]
-if """key":'""" in metric:
-    key_start = metric.find("""key":'""") + len("""key":'""")
-    key_end = metric.find("'",key_start)
-    key_value = metric[key_start:key_end]
-if '"key"#"' in metric:
-    key_start = metric.find('"key"#"') + len('"key"#"')
-    key_end = metric.find('"',key_start)
-    key_value = metric[key_start:key_end]
-if 'key#' in metric:
-    key_start = metric.find('key#') + len('key#')
-    key_end = metric.find('$',key_start)
-    key_value = metric[key_start:key_end]
-if """Data=[['""" in metric:
-    key_start = metric.find("""Data=[['""") + len("""Data=[['""")
-    key_end = metric.find("'",key_start)
-    key_value = metric[key_start:key_end]
-if "metadata=" in metric:
-    metadata_start = metric.find("metadata=") + len("metadata=")
-    metadata_end = metric.find(";",metadata_start)
-    metadata_value = metric[metadata_start:metadata_end]
-    if len(metadata_value) > 10:
-        metadata_start = metric.find("metadata=") + len("metadata=")
-        metadata_end = metric.find("!", metadata_start)
-        metadata_value = metric[metadata_start:metadata_end]
-if 'metadata"#"' in metric:
-    metadata_start = metric.find('metadata"#"') + len('metadata"#"')
-    metadata_end = metric.find('"',metadata_start)
-    metadata_value = metric[metadata_start:metadata_end]
-if """metadata":'""" in metric:
-    metadata_start = metric.find("""metadata":'""") + len("""metadata":'""")
-    metadata_end = metric.find("'",metadata_start)
-    metadata_value = metric[metadata_start:metadata_end]
-if "metadata#" in metric:
-    metadata_start = metric.find("metadata#") + len("metadata#")
-    metadata_end = metric.find("$",metadata_start)
-    metadata_value = metric[metadata_start:metadata_end]
-if "metadata1=" in metric:
-    metadata1_start = metric.find("metadata1=") + len("metadata1=")
-    metadata1_end = metric.find(";",metadata1_start)
-    metadata1_value = metric[metadata1_start:metadata1_end]
-if 'metadata1"#"' in metric:
-    metadata1_start = metric.find('metadata1"#"') + len('metadata1"#"')
-    metadata1_end = metric.find('"',metadata1_start)
-    metadata1_value = metric[metadata1_start:metadata1_end]
-if """metadata1":'""" in metric:
-    metadata1_start = metric.find("""metadata1":'""") + len("""metadata1":'""")
-    metadata1_end = metric.find("'",metadata1_start)
-    metadata1_value = metric[metadata1_start:metadata1_end]
-if 'metadata1#' in metric:
-    metadata1_start = metric.find('metadata1#') + len('metadata1#')
-    metadata1_end = metric.find('$',metadata1_start)
-    metadata1_value = metric[metadata1_start:metadata1_end]
-if "metadata2=" in metric:
-    metadata2_start = metric.find("metadata2=") + len("metadata2=")
-    metadata2_end = metric.find(";",metadata2_start)
-    metadata2_value = metric[metadata2_start:metadata2_end]
-if 'metadata2"#"' in metric:
-    metadata2_start = metric.find('metadata2"#"') + len('metadata2"#"')
-    metadata2_end = metric.find('"',metadata2_start)
-    metadata2_value = metric[metadata2_start:metadata2_end]
-if """metadata2":'""" in metric:
-    metadata2_start = metric.find("""metadata2":'""") + len("""metadata2":'""")
-    metadata2_end = metric.find("'",metadata2_start)
-    metadata2_value = metric[metadata2_start:metadata2_end]
-if 'metadata2#' in metric:
-    metadata2_start = metric.find('metadata2#') + len('metadata2#')
-    metadata2_end = metric.find('$',metadata2_start)
-    metadata2_value = metric[metadata2_start:metadata2_end]
-if "metadata3=" in metric:
-    metadata3_start = metric.find("metadata3=") + len("metadata3=")
-    metadata3_end = metric.find(";",metadata3_start)
-    metadata3_value = metric[metadata3_start:metadata3_end]
-if 'metadata3"#"' in metric:
-    metadata3_start = metric.find('metadata3"#"') + len('metadata3"#"')
-    metadata3_end = metric.find('"',metadata3_start)
-    metadata3_value = metric[metadata3_start:metadata3_end]
-if """metadata3":'""" in metric:
-    metadata3_start = metric.find("""metadata3":'""") + len("""metadata3":'""")
-    metadata3_end = metric.find("'",metadata3_start)
-    metadata3_value = metric[metadata3_start:metadata3_end]
-if 'metadata3#' in metric:
-    metadata3_start = metric.find('metadata3#') + len('metadata3#')
-    metadata3_end = metric.find('$',metadata3_start)
-    metadata3_value = metric[metadata3_start:metadata3_end]
-if "metadata4=" in metric:
-    metadata4_start = metric.find("metadata4=") + len("metadata4=")
-    metadata4_end = metric.find(";",metadata4_start)
-    metadata4_value = metric[metadata4_start:metadata4_end]
-if 'metadata4"#"' in metric:
-    metadata4_start = metric.find('metadata4"#"') + len('metadata4"#"')
-    metadata4_end = metric.find('"',metadata4_start)
-    metadata4_value = metric[metadata4_start:metadata4_end]
-if """metadata4":'""" in metric:
-    metadata4_start = metric.find("""metadata4":'""") + len("""metadata4":'""")
-    metadata4_end = metric.find("'",metadata4_start)
-    metadata4_value = metric[metadata4_start:metadata4_end]
-if 'metadata4#' in metric:
-    metadata4_start = metric.find('metadata4#') + len('metadata4#')
-    metadata4_end = metric.find('$',metadata4_start)
-    metadata4_value = metric[metadata4_start:metadata4_end]
-else:
-    print()
+def metric_time_raw():
+    global device_record_time_value_vlog, device_record_time_value_vital
+    if fos_ace == "1" and vlog_metric:
+        parts = vlog_metric.split()
+        date = parts[0]
+        time_sec = parts[1]
+        time_split = time_sec.split(".")
+        time_str = time_split[0]
+        current_year = datetime.now().year
+        device_record_time_value_vlog = f'["{current_year}-{date}T{time_str}" TO "{current_year}-{date}T{time_str}"]'
+    if fos_ace == "1" and vital_metric:
+        parts = vital_metric.split()
+        date = parts[0]
+        time_sec = parts[1]
+        time_split = time_sec.split(".")
+        time_str = time_split[0]
+        current_year = datetime.now().year
+        device_record_time_value_vital = f'["{current_year}-{date}T{time_str}" TO "{current_year}-{date}T{time_str}"]'
+    if fos_ace == "2" and vlog_metric:
+        parts = vlog_metric.split(":")
+        device_record_time_value_vlog = parts[0]
+    if fos_ace == "2" and vital_metric:
+        device_record_time_start = vital_metric.find('Timestamp":"') + len('Timestamp":"')
+        device_record_time_end = vital_metric.find('.000+00:00"', device_record_time_start)
+        device_record_time = vital_metric[device_record_time_start:device_record_time_end]
+        device_record_time_value_vital = f'["{device_record_time}" TO "{device_record_time}"]'
+    else:
+        print()
+
+def metric_time_agg():
+    global device_record_time_value_vlog, device_record_time_value_vital
+    if fos_ace == "1" and vlog_metric:
+        parts = vlog_metric.split()
+        date = parts[0]
+        current_year = datetime.now().year
+        device_record_time_value_vlog = f'["{current_year}-{date}" TO "{current_year}-{date}"]'
+    if fos_ace == "1" and vital_metric:
+        parts = vital_metric.split()
+        date = parts[0]
+        current_year = datetime.now().year
+        device_record_time_value_vital = f'["{current_year}-{date}" TO "{current_year}-{date}"]'
+    if fos_ace == "2" and vital_metric:
+        device_record_time_start = vital_metric.find('Timestamp":"') + len('Timestamp":"')
+        device_record_time_end = vital_metric.find('T', device_record_time_start)
+        device_record_time = vital_metric[device_record_time_start:device_record_time_end]
+        device_record_time_value_vlog = f'["{device_record_time}" TO "{device_record_time}"]'
+        device_record_time_value_vital = device_record_time_value_vlog
+    else:
+        print()
+
+def filter_values_vlog():
+    global operation_value_vlog, key_value_vlog, metadata_value_vlog, metadata1_value_vlog, metadata2_value_vlog, metadata3_value_vlog, metadata4_value_vlog
+    if 'wifiKDM:' in vlog_metric:
+        operation_start = vlog_metric.find('wifiKDM:') + len('wifiKDM:')
+        operation_end = vlog_metric.find(':', operation_start)
+        operation_value_vlog = vlog_metric[operation_start:operation_end]
+    if """operation":'""" in vlog_metric:
+        operation_start = vlog_metric.find("""operation":'""") + len("""operation":'""")
+        operation_end = vlog_metric.find("'", operation_start)
+        operation_value_vlog = vlog_metric[operation_start:operation_end]
+    if "key=" in vlog_metric:
+        key_start = vlog_metric.find("key=") + len("key=")
+        key_end = vlog_metric.find(";", key_start)
+        key_value_vlog = vlog_metric[key_start:key_end]
+    if 'key#' in vlog_metric:
+        key_start = vlog_metric.find('key#') + len('key#')
+        key_end = vlog_metric.find('$', key_start)
+        key_value_vlog = vlog_metric[key_start:key_end]
+    if "metadata=" in vlog_metric:
+        metadata_start = vlog_metric.find("metadata=") + len("metadata=")
+        metadata_end = vlog_metric.find(";", metadata_start)
+        metadata_value_vlog = vlog_metric[metadata_start:metadata_end]
+        if len(metadata_value_vlog) > 10:
+            metadata_start = vlog_metric.find("metadata=") + len("metadata=")
+            metadata_end = vlog_metric.find("!", metadata_start)
+            metadata_value_vlog = vlog_metric[metadata_start:metadata_end]
+    if 'metadata"#"' in vlog_metric:
+        metadata_start = vlog_metric.find('metadata"#"') + len('metadata"#"')
+        metadata_end = vlog_metric.find('"', metadata_start)
+        metadata_value_vlog = vlog_metric[metadata_start:metadata_end]
+    if "metadata#" in vlog_metric:
+        metadata_start = vlog_metric.find("metadata#") + len("metadata#")
+        metadata_end = vlog_metric.find("$", metadata_start)
+        metadata_value_vlog = vlog_metric[metadata_start:metadata_end]
+    if "metadata1=" in vlog_metric:
+        metadata1_start = vlog_metric.find("metadata1=") + len("metadata1=")
+        metadata1_end = vlog_metric.find(";", metadata1_start)
+        metadata1_value_vlog = vlog_metric[metadata1_start:metadata1_end]
+    if 'metadata1"#"' in vlog_metric:
+        metadata1_start = vlog_metric.find('metadata1"#"') + len('metadata1"#"')
+        metadata1_end = vlog_metric.find('"', metadata1_start)
+        metadata1_value_vlog = vlog_metric[metadata1_start:metadata1_end]
+    if 'metadata1#' in vlog_metric:
+        metadata1_start = vlog_metric.find('metadata1#') + len('metadata1#')
+        metadata1_end = vlog_metric.find('$', metadata1_start)
+        metadata1_value_vlog = vlog_metric[metadata1_start:metadata1_end]
+    if "metadata2=" in vlog_metric:
+        metadata2_start = vlog_metric.find("metadata2=") + len("metadata2=")
+        metadata2_end = vlog_metric.find(";", metadata2_start)
+        metadata2_value_vlog = vlog_metric[metadata2_start:metadata2_end]
+    if 'metadata2"#"' in vlog_metric:
+        metadata2_start = vlog_metric.find('metadata2"#"') + len('metadata2"#"')
+        metadata2_end = vlog_metric.find('"', metadata2_start)
+        metadata2_value_vlog = vlog_metric[metadata2_start:metadata2_end]
+    if 'metadata2#' in vlog_metric:
+        metadata2_start = vlog_metric.find('metadata2#') + len('metadata2#')
+        metadata2_end = vlog_metric.find('$', metadata2_start)
+        metadata2_value_vlog = vlog_metric[metadata2_start:metadata2_end]
+    if "metadata3=" in vlog_metric:
+        metadata3_start = vlog_metric.find("metadata3=") + len("metadata3=")
+        metadata3_end = vlog_metric.find(";", metadata3_start)
+        metadata3_value_vlog = vlog_metric[metadata3_start:metadata3_end]
+    if 'metadata3"#"' in vlog_metric:
+        metadata3_start = vlog_metric.find('metadata3"#"') + len('metadata3"#"')
+        metadata3_end = vlog_metric.find('"', metadata3_start)
+        metadata3_value_vlog = vlog_metric[metadata3_start:metadata3_end]
+    if 'metadata3#' in vlog_metric:
+        metadata3_start = vlog_metric.find('metadata3#') + len('metadata3#')
+        metadata3_end = vlog_metric.find('$', metadata3_start)
+        metadata3_value_vlog = vlog_metric[metadata3_start:metadata3_end]
+    if "metadata4=" in vlog_metric:
+        metadata4_start = vlog_metric.find("metadata4=") + len("metadata4=")
+        metadata4_end = vlog_metric.find(";", metadata4_start)
+        metadata4_value_vlog = vlog_metric[metadata4_start:metadata4_end]
+    if 'metadata4"#"' in vlog_metric:
+        metadata4_start = vlog_metric.find('metadata4"#"') + len('metadata4"#"')
+        metadata4_end = vlog_metric.find('"', metadata4_start)
+        metadata4_value_vlog = vlog_metric[metadata4_start:metadata4_end]
+    if 'metadata4#' in vlog_metric:
+        metadata4_start = vlog_metric.find('metadata4#') + len('metadata4#')
+        metadata4_end = vlog_metric.find('$', metadata4_start)
+        metadata4_value_vlog = vlog_metric[metadata4_start:metadata4_end]
+    else:
+        print()
+
+def filter_values_vital():
+    global version_value, operation_value_vital, key_value_vital, metadata_value_vital, metadata1_value_vital, metadata2_value_vital, metadata3_value_vital, metadata4_value_vital
+    if 'software_version=' in vital_metric:
+        version_start = vital_metric.find('software_version=') + len('software_version=')
+        version_end = vital_metric.find(';', version_start)
+        version_value = vital_metric[version_start:version_end]
+    if """_osFileTag":'""" in vital_metric:
+        version_start = vital_metric.find("""_osFileTag":'""") + len("""_osFileTag":'""")
+        version_end = vital_metric.find("'", version_start)
+        version_value = vital_metric[version_start:version_end]
+    if 'software_version"#"' in vital_metric:
+        version_start = vital_metric.find('software_version"#"') + len('software_version"#"')
+        version_end = vital_metric.find('"', version_start)
+        version_value = vital_metric[version_start:version_end]
+    if 'wifiKDM:' in vital_metric:
+        operation_start = vital_metric.find('wifiKDM:') + len('wifiKDM:')
+        operation_end = vital_metric.find(':', operation_start)
+        operation_value_vital = vital_metric[operation_start:operation_end]
+    if 'operation=' in vital_metric:
+        operation_start = vital_metric.find('operation=') + len('operation=')
+        operation_end = vital_metric.find(';', operation_start)
+        operation_value_vital = vital_metric[operation_start:operation_end]
+    if """operation":'""" in vital_metric:
+        operation_start = vital_metric.find("""operation":'""") + len("""operation":'""")
+        operation_end = vital_metric.find("'", operation_start)
+        operation_value_vital = vital_metric[operation_start:operation_end]
+    if "key=" in vital_metric:
+        key_start = vital_metric.find("key=") + len("key=")
+        key_end = vital_metric.find(";", key_start)
+        key_value_vital = vital_metric[key_start:key_end]
+    if """key":'""" in vital_metric:
+        key_start = vital_metric.find("""key":'""") + len("""key":'""")
+        key_end = vital_metric.find("'", key_start)
+        key_value_vital = vital_metric[key_start:key_end]
+    if '"key"#"' in vital_metric:
+        key_start = vital_metric.find('"key"#"') + len('"key"#"')
+        key_end = vital_metric.find('"', key_start)
+        key_value_vital = vital_metric[key_start:key_end]
+    if """Data=[['""" in vital_metric:
+        key_start = vital_metric.find("""Data=[['""") + len("""Data=[['""")
+        key_end = vital_metric.find("'", key_start)
+        key_value_vital = vital_metric[key_start:key_end]
+    if "metadata=" in vital_metric:
+        metadata_start = vital_metric.find("metadata=") + len("metadata=")
+        metadata_end = vital_metric.find(";", metadata_start)
+        metadata_value_vital = vital_metric[metadata_start:metadata_end]
+        if len(metadata_value_vital) > 10:
+            metadata_start = vital_metric.find("metadata=") + len("metadata=")
+            metadata_end = vital_metric.find("!", metadata_start)
+            metadata_value_vital = vital_metric[metadata_start:metadata_end]
+    if 'metadata"#"' in vital_metric:
+        metadata_start = vital_metric.find('metadata"#"') + len('metadata"#"')
+        metadata_end = vital_metric.find('"', metadata_start)
+        metadata_value_vital = vital_metric[metadata_start:metadata_end]
+    if """metadata":'""" in vital_metric:
+        metadata_start = vital_metric.find("""metadata":'""") + len("""metadata":'""")
+        metadata_end = vital_metric.find("'", metadata_start)
+        metadata_value_vital = vital_metric[metadata_start:metadata_end]
+    if "metadata1=" in vital_metric:
+        metadata1_start = vital_metric.find("metadata1=") + len("metadata1=")
+        metadata1_end = vital_metric.find(";", metadata1_start)
+        metadata1_value_vital = vital_metric[metadata1_start:metadata1_end]
+    if 'metadata1"#"' in vital_metric:
+        metadata1_start = vital_metric.find('metadata1"#"') + len('metadata1"#"')
+        metadata1_end = vital_metric.find('"', metadata1_start)
+        metadata1_value_vital = vital_metric[metadata1_start:metadata1_end]
+    if """metadata1":'""" in vital_metric:
+        metadata1_start = vital_metric.find("""metadata1":'""") + len("""metadata1":'""")
+        metadata1_end = vital_metric.find("'", metadata1_start)
+        metadata1_value_vital = vital_metric[metadata1_start:metadata1_end]
+    if "metadata2=" in vital_metric:
+        metadata2_start = vital_metric.find("metadata2=") + len("metadata2=")
+        metadata2_end = vital_metric.find(";", metadata2_start)
+        metadata2_value_vital = vital_metric[metadata2_start:metadata2_end]
+    if 'metadata2"#"' in vital_metric:
+        metadata2_start = vital_metric.find('metadata2"#"') + len('metadata2"#"')
+        metadata2_end = vital_metric.find('"', metadata2_start)
+        metadata2_value_vital = vital_metric[metadata2_start:metadata2_end]
+    if """metadata2":'""" in vital_metric:
+        metadata2_start = vital_metric.find("""metadata2":'""") + len("""metadata2":'""")
+        metadata2_end = vital_metric.find("'", metadata2_start)
+        metadata2_value_vital = vital_metric[metadata2_start:metadata2_end]
+    if "metadata3=" in vital_metric:
+        metadata3_start = vital_metric.find("metadata3=") + len("metadata3=")
+        metadata3_end = vital_metric.find(";", metadata3_start)
+        metadata3_value_vital = vital_metric[metadata3_start:metadata3_end]
+    if 'metadata3"#"' in vital_metric:
+        metadata3_start = vital_metric.find('metadata3"#"') + len('metadata3"#"')
+        metadata3_end = vital_metric.find('"', metadata3_start)
+        metadata3_value_vital = vital_metric[metadata3_start:metadata3_end]
+    if """metadata3":'""" in vital_metric:
+        metadata3_start = vital_metric.find("""metadata3":'""") + len("""metadata3":'""")
+        metadata3_end = vital_metric.find("'", metadata3_start)
+        metadata3_value_vital = vital_metric[metadata3_start:metadata3_end]
+    if "metadata4=" in vital_metric:
+        metadata4_start = vital_metric.find("metadata4=") + len("metadata4=")
+        metadata4_end = vital_metric.find(";", metadata4_start)
+        metadata4_value_vital = vital_metric[metadata4_start:metadata4_end]
+    if 'metadata4"#"' in vital_metric:
+        metadata4_start = vital_metric.find('metadata4"#"') + len('metadata4"#"')
+        metadata4_end = vital_metric.find('"', metadata4_start)
+        metadata4_value_vital = vital_metric[metadata4_start:metadata4_end]
+    if """metadata4":'""" in vital_metric:
+        metadata4_start = vital_metric.find("""metadata4":'""") + len("""metadata4":'""")
+        metadata4_end = vital_metric.find("'", metadata4_start)
+        metadata4_value_vital = vital_metric[metadata4_start:metadata4_end]
+    else:
+        print()
 
 def search_filter():
-    global Filter
-    global Filter_kdm
-    global Filter_minerva
-    program_kdm = "wifiKDM"
-    program_minerva = "wifiKDM_minerva"
-    Filter = f"software_version:{version_value} AND device_family:{device_name} AND operation:{operation_value} AND pool:{ota_pool}"
-    key = ["key=", """key":'""", 'key":', '"key"#"', 'key#', """Data=[['"""]
-    metadata = ["metadata=", 'metadata"#"', """metadata":'""", "metadata#"]
-    metadata1 = ["metadata1=", 'metadata1"#"', """metadata1":'""", "metadata1#"]
-    metadata2 = ["metadata2=", 'metadata2"#"', """metadata2":'""", "metadata2#"]
-    metadata3 = ["metadata3=", 'metadata3"#"', """metadata3":'""", "metadata3#"]
-    metadata4 = ["metadata4=", 'metadata4"#"', """metadata4":'""", "metadata4#"]
-    if any(value in metric for value in key):
-        Filter += f" AND key:{key_value}"
-    if any(value in metric for value in metadata):
-        Filter += f" AND metadata:{metadata_value}"
-    if any(value in metric for value in metadata1):
-        Filter += f" AND d_metadata1:{metadata1_value}"
-    if any(value in metric for value in metadata2):
-        Filter += f" AND d_metadata2:{metadata2_value}"
-    if any(value in metric for value in metadata3):
-        Filter += f" AND d_metadata3:{metadata3_value}"
-    if any(value in metric for value in metadata4):
-        Filter += f" AND d_metadata4:{metadata4_value}"
+    global Filter_kdm, Filter_minerva
+    Filter_kdm = f"software_version:{version_value} AND device_family:{device_name} AND operation:{operation_value_vlog} AND pool:{ota_pool} AND device_type:{device_type} AND device_record_time:{device_record_time_value_vlog}"
+    Filter_minerva = f"software_version:{version_value} AND device_family:{device_name} AND operation:{operation_value_vital} AND pool:{ota_pool} AND device_type:{device_type} AND device_record_time:{device_record_time_value_vital}"
+    if any(value in vlog_metric for value in key):
+        Filter_kdm += f" AND key:{key_value_vlog}"
+    if any(value in vlog_metric for value in metadata):
+        Filter_kdm += f" AND metadata:{metadata_value_vlog}"
+    if any(value in vlog_metric for value in metadata1):
+        Filter_kdm += f" AND d_metadata1:{metadata1_value_vlog}"
+    if any(value in vlog_metric for value in metadata2):
+        Filter_kdm += f" AND d_metadata2:{metadata2_value_vlog}"
+    if any(value in vlog_metric for value in metadata3):
+        Filter_kdm += f" AND d_metadata3:{metadata3_value_vlog}"
+    if any(value in vlog_metric for value in metadata4):
+        Filter_kdm += f" AND d_metadata4:{metadata4_value_vlog}"
+    if any(value in vital_metric for value in key):
+        Filter_minerva += f" AND key:{key_value_vital}"
+    if any(value in vital_metric for value in metadata):
+        Filter_minerva += f" AND metadata:{metadata_value_vital}"
+    if any(value in vital_metric for value in metadata1):
+        Filter_minerva += f" AND d_metadata1:{metadata1_value_vital}"
+    if any(value in vital_metric for value in metadata2):
+        Filter_minerva += f" AND d_metadata2:{metadata2_value_vital}"
+    if any(value in vital_metric for value in metadata3):
+        Filter_minerva += f" AND d_metadata3:{metadata3_value_vital}"
+    if any(value in vital_metric for value in metadata4):
+        Filter_minerva += f" AND d_metadata4:{metadata4_value_vital}"
+    if raw_agg == "2":
+        Filter_kdm += " AND program:wifiKDM"
+        Filter_minerva += " AND program:wifiKDM_minerva"
     else:
         print()
-    Filter_kdm = Filter + f" AND program:{program_kdm}"
-    Filter_minerva = Filter + f" AND program:{program_minerva}"
-search_filter()
-
-
-print("""For Raw = Enter 1
-For Agg = Enter 2""")
-raw_agg = input("Raw or Agg: ")
-print()
-
 
 def raw():
     print("Prerequisites: Metric should be emitted from device side and kept connected to stable internet for more then 4 hours")
@@ -299,14 +407,14 @@ def raw():
         kdm_results = driver.find_element(By.XPATH, "//div/doc-table/div[@class='doc-table-container']")
         kdm_results_text = kdm_results.text
         if version_value in kdm_results_text:
-            print(f"{operation_value} kdm metric is been emitted. Hence passing the case.")
+            print(f"{operation_value_vlog} kdm metric is been emitted. Hence passing the case.")
         else:
-            print(f"{operation_value} kdm metric is not been emitted. Hence failing the case.")
+            print(f"{operation_value_vlog} kdm metric is not been emitted. Hence failing the case.")
             print("Note:")
             print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
             print("If still metric is not seen raise a jira")
     except NoSuchElementException:
-        print(f"{operation_value} kdm metric is not been emitted. Hence failing the case.")
+        print(f"{operation_value_vlog} kdm metric is not been emitted. Hence failing the case.")
         print("Note:")
         print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
         print("If still metric is not seen raise a jira")
@@ -355,14 +463,14 @@ def raw():
         minerva_results = driver.find_element(By.XPATH, "//div/doc-table/div[@class='doc-table-container']")
         minerva_results_text = minerva_results.text
         if version_value in minerva_results_text:
-            print(f"{operation_value} minerva metric is been emitted. Hence passing the case.")
+            print(f"{operation_value_vital} minerva metric is been emitted. Hence passing the case.")
         else:
-            print(f"{operation_value} minerva metric is not been emitted. Hence failing the case.")
+            print(f"{operation_value_vital} minerva metric is not been emitted. Hence failing the case.")
             print("Note:")
             print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
             print("If still metric is not seen raise a jira")
     except NoSuchElementException:
-        print(f"{operation_value} minerva metric is not been emitted. Hence failing the case.")
+        print(f"{operation_value_vital} minerva metric is not been emitted. Hence failing the case.")
         print("Note:")
         print("Recheck once again by triggering metric from DUT and leaving the device idle for 4 hours with stable internet")
         print("If still metric is not seen raise a jira")
@@ -436,14 +544,14 @@ def agg():
         kdm_results = driver.find_element(By.XPATH, "//main/div/div/div[@class = 'discover-content']")
         kdm_results_text = kdm_results.text
         if version_value in kdm_results_text:
-            print(f"{operation_value} kdm metric is been emitted. Hence passing the case.")
+            print(f"{operation_value_vlog} kdm metric is been emitted. Hence passing the case.")
         else:
-            print(f"{operation_value} kdm metric is not been emitted. Hence failing the case.")
+            print(f"{operation_value_vlog} kdm metric is not been emitted. Hence failing the case.")
             print("Note:")
             print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
             print("If still metric is not seen raise a jira")
     except NoSuchElementException:
-        print(f"{operation_value} kdm metric is not been emitted. Hence failing the case.")
+        print(f"{operation_value_vlog} kdm metric is not been emitted. Hence failing the case.")
         print("Note:")
         print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
         print("If still metric is not seen raise a jira")
@@ -492,21 +600,32 @@ def agg():
         minerva_results = driver.find_element(By.XPATH, "//button/span[@class='fa fa-search']")
         minerva_results_text = minerva_results.text
         if version_value in minerva_results_text:
-            print(f"{operation_value} minerva metric is been emitted. Hence passing the case.")
+            print(f"{operation_value_vital} minerva metric is been emitted. Hence passing the case.")
         else:
-            print(f"{operation_value} minerva metric is not been emitted. Hence failing the case.")
+            print(f"{operation_value_vital} minerva metric is not been emitted. Hence failing the case.")
             print("Note:")
             print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
             print("If still metric is not seen raise a jira")
     except NoSuchElementException:
-        print(f"{operation_value} minerva metric is not been emitted. Hence failing the case.")
+        print(f"{operation_value_vital} minerva metric is not been emitted. Hence failing the case.")
         print("Note:")
         print("Recheck once again by triggering metric from DUT and leaving the device idle for 8 hours with stable internet")
         print("If still metric is not seen raise a jira")
     pyautogui.hotkey("alt", "tab")
 
-if raw_agg == "1":
-    raw()
-else:
-    agg()
-
+def raw_agg_select():
+    user_detail()
+    metric_input()
+    if raw_agg == "1":
+        metric_time_raw()
+        filter_values_vlog()
+        filter_values_vital()
+        search_filter()
+        raw()
+    else:
+        metric_time_agg()
+        filter_values_vlog()
+        filter_values_vital()
+        search_filter()
+        agg()
+raw_agg_select()
