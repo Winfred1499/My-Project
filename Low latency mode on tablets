@@ -1,0 +1,179 @@
+import subprocess
+import time
+import os
+
+
+def check_log_for_gtk(log_file):
+    try:
+        current_directory = os.getcwd()
+        print(f"Logcat path: {current_directory}")
+        if not os.path.isfile(log_file):
+            print(f"The log file {log_file} does not exist in the current directory.")
+            return
+        with open(log_file, 'r' ,  encoding='utf-8', errors='ignore') as file:
+            log_content = file.read()
+            if 'Group rekeying completed' in log_content:
+                print("Group rekeying is seen.")
+            else:
+                print("Group rekeying is not seen.")
+    except Exception as e:
+        print(f"An error occurred while reading the log file: {e}")
+
+
+def llm_command(device_dsn, case_no):
+    subprocess.run(f"adb -s {device_dsn} shell cmd wifi force-low-latency-mode enabled")
+    time.sleep(300)
+    scan_check = subprocess.run(f"adb -s {device_dsn} shell wpa_cli scan_r", capture_output=True, text=True)
+    print(scan_check.stdout.strip())
+    time.sleep(5)
+    scan_result = scan_check.stdout.strip().split("\n")[1:]
+    if len(scan_result) == 2:
+        print(f"{case_no}: Passed")
+    else:
+        print(f"{case_no}: Failed")
+    subprocess.run(f"adb -s {device_dsn} shell cmd wifi force-low-latency-mode disabled")
+
+
+def add_network(testcase_value, device_dsn):
+    SSID = testcase_value.get("SSID")
+    Password = testcase_value.get("Password")
+    SSID_status = testcase_value.get("SSID_status")
+    Security = testcase_value.get("Security")
+    print()
+    subprocess.run(
+        f"adb -s {device_dsn} shell am start-foreground-service -n com.amazon.simplewifi/.SimpleWifiService -a com.amazon.simplewifi.WIFI_NETWORK_REMOVE_ALL_ACTION")
+    time.sleep(3)
+    subprocess.run(
+        f"adb -s {device_dsn} shell am start-foreground-service -n com.amazon.simplewifi/.SimpleWifiService -a com.amazon.simplewifi.WIFI_NETWORK_SAVE_ALL_ACTION")
+    time.sleep(3)
+    subprocess.run(
+        f"adb -s {device_dsn} shell am start-foreground-service -n com.amazon.simplewifi/.SimpleWifiService -a com.amazon.simplewifi.WIFI_SETUP_ACTION -e ssid {SSID} -e pass {Password} -e security {Security} -e hidden {SSID_status}")
+    time.sleep(3)
+    subprocess.run(
+        f"adb -s {device_dsn} shell am start-foreground-service -n com.amazon.simplewifi/.SimpleWifiService -a com.amazon.simplewifi.WIFI_NETWORK_SAVE_ALL_ACTION")
+    time.sleep(3)
+
+
+def SSID_Password(Testcase_selection):
+    all_ssid_password = {}
+    if Testcase_selection == "1" or Testcase_selection == "all":
+        print("\nTestcase1:BGN_Mode_WPA2_AES_Channel(ch11)\n")
+        all_ssid_password["BGN_Mode_WPA2_AES_Channel_ch11_SSID"] = input("BGN_Mode_WPA2_AES_Channel(ch11)_SSID: ")
+        all_ssid_password["BGN_Mode_WPA2_AES_Channel_ch11_Password"] = input("BGN_Mode_WPA2_AES_Channel(ch11)_Password: ")
+    if Testcase_selection == "2" or Testcase_selection == "all":
+        print("\nTestcase2:AC_Mode_WPA2_AES_Channel_ch165\n")
+        all_ssid_password["AC_Mode_WPA2_AES_Channel_ch165_SSID"] = input("AC_Mode_WPA2_AES_Channel(ch165)_SSID: ")
+        all_ssid_password["AC_Mode_WPA2_AES_Channel_ch165_Password"] = input("AC_Mode_WPA2_AES_Channel(ch165)_Password: ")
+    if Testcase_selection == "3" or Testcase_selection == "all":
+        print("\nTestcase3:Hidden_SSID_AC_Mode_DFS_Channel_ch100_and_WPA2_AES_TKIP_Security\n")
+        all_ssid_password["Hidden_SSID_AC_Mode_DFS_Channel_ch100_and_WPA2_AES_TKIP_Security_SSID"] = input(
+            "Hidden_SSID_AC_Mode_DFS_Channel_ch100_and_WPA2_AES/TKIP_Security_SSID: ")
+        all_ssid_password["Hidden_SSID_AC_Mode_DFS_Channel_ch100_and_WPA2_AES_TKIP_Security_Password"] = input(
+            "Hidden_SSID_AC_Mode_DFS_Channel_ch100_and_WPA2_AES/TKIP_Security_Password: ")
+    if Testcase_selection == "4" or Testcase_selection == "all":
+        print("\nTestcase4:WPA3_PERSONAL_ONLY_MODE_GTK_Rekeying\n")
+        all_ssid_password["WPA3_PERSONAL_ONLY_MODE_GTK_Rekeying_SSID"] = input("WPA3_PERSONAL_ONLY_MODE_GTK_Rekeying_SSID: ")
+        all_ssid_password["WPA3_PERSONAL_ONLY_MODE_GTK_Rekeying_Password"] = input(
+            "WPA3_PERSONAL_ONLY_MODE_GTK_Rekeying_Password: ")
+    else:
+        print()
+    return all_ssid_password
+
+
+def testcase1(device_dsn, ssid_password_extract):
+    testcase_value = {
+        "SSID": ssid_password_extract.get("BGN_Mode_WPA2_AES_Channel_ch11_SSID"),
+        "Password": ssid_password_extract.get("BGN_Mode_WPA2_AES_Channel_ch11_Password"),
+        "Security": "WPA-PSK",
+        "SSID_status": "0"
+    }
+    case_no = "Testcase1"
+    logcat_process = subprocess.Popen(f"adb -s {device_dsn} logcat -v time -b all > {case_no}_log.txt", shell=True)
+    add_network(testcase_value, device_dsn)
+    llm_command(device_dsn, case_no)
+    logcat_process.terminate()
+
+
+def testcase2(device_dsn, ssid_password_extract):
+    testcase_value = {
+        "SSID": ssid_password_extract.get("AC_Mode_WPA2_AES_Channel_ch165_SSID"),
+        "Password": ssid_password_extract.get("AC_Mode_WPA2_AES_Channel_ch165_Password"),
+        "Security": "WPA-PSK",
+        "SSID_status": "0"
+    }
+    case_no = "Testcase2"
+    logcat_process = subprocess.Popen(f"adb -s {device_dsn} logcat -v time -b all > {case_no}_log.txt", shell=True)
+    add_network(testcase_value, device_dsn)
+    llm_command(device_dsn, case_no)
+    logcat_process.terminate()
+
+
+def testcase3(device_dsn, ssid_password_extract):
+    testcase_value = {
+        "SSID": ssid_password_extract.get("Hidden_SSID_AC_Mode_DFS_Channel_ch100_and_WPA2_AES_TKIP_Security_SSID"),
+        "Password": ssid_password_extract.get(
+            "Hidden_SSID_AC_Mode_DFS_Channel_ch100_and_WPA2_AES_TKIP_Security_Password"),
+        "Security": "WPA-PSK",
+        "SSID_status": "1",
+    }
+    case_no = "Testcase3"
+    logcat_process = subprocess.Popen(f"adb -s {device_dsn} logcat -v time -b all > {case_no}_log.txt", shell=True)
+    add_network(testcase_value, device_dsn)
+    llm_command(device_dsn, case_no)
+    logcat_process.terminate()
+
+
+def testcase4(device_dsn, ssid_password_extract):
+    testcase_value = {
+        "SSID": ssid_password_extract.get("WPA3_PERSONAL_ONLY_MODE_GTK_Rekeying_SSID"),
+        "Password": ssid_password_extract.get("WPA3_PERSONAL_ONLY_MODE_GTK_Rekeying_Password"),
+        "Security": "WPA3-PSK",
+        "SSID_status": "0",
+    }
+    case_no = "Testcase4"
+    log_file = f"{case_no}_log.txt"
+    logcat_process = subprocess.Popen(f"adb -s {device_dsn} logcat -v time -b all > {log_file}", shell=True)
+    add_network(testcase_value, device_dsn)
+    llm_command(device_dsn, case_no)
+    logcat_process.terminate()
+    check_log_for_gtk(log_file)
+
+
+def main():
+    Testcase_selection = input("""Testcase1: BGN_Mode_WPA2_AES_Channel(ch11)
+Testcase2: AC_Mode_WPA2_AES_Channel_ch165
+Testcase3: Hidden_SSID_AC_Mode_DFS_Channel_ch100_and_WPA2_AES_TKIP_Security
+Testcase4: WPA3_PERSONAL_ONLY_MODE_GTK_Rekeying
+Enter 1, 2, 3, 4 or all
+Select_testcase: """)
+    devices = subprocess.run("adb devices -l", capture_output=True, text=True)
+    device_check = devices.stdout.strip().split("\n")
+    device = device_check[1].strip().split()
+    device_dsn = device[0]
+    if Testcase_selection == "all":
+        ssid_password_extract = SSID_Password(Testcase_selection)
+        print("Wait for 20 minutes")
+        testcase1(device_dsn, ssid_password_extract)
+        testcase2(device_dsn, ssid_password_extract)
+        testcase3(device_dsn, ssid_password_extract)
+        testcase4(device_dsn, ssid_password_extract)
+    elif Testcase_selection == "1":
+        ssid_password_extract = SSID_Password(Testcase_selection)
+        print("Wait for 5 minutes")
+        testcase1(device_dsn, ssid_password_extract)
+    elif Testcase_selection == "2":
+        ssid_password_extract = SSID_Password(Testcase_selection)
+        print("Wait for 5 minutes")
+        testcase2(device_dsn, ssid_password_extract)
+    elif Testcase_selection == "3":
+        ssid_password_extract = SSID_Password(Testcase_selection)
+        print("Wait for 5 minutes")
+        testcase3(device_dsn, ssid_password_extract)
+    elif Testcase_selection == "4":
+        ssid_password_extract = SSID_Password(Testcase_selection)
+        print("Wait for 5 minutes")
+        testcase4(device_dsn, ssid_password_extract)
+    else:
+        print("Wrong Selection")
+if __name__ == "__main__":
+    main()
